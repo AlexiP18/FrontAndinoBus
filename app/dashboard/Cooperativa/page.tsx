@@ -1,5 +1,12 @@
+'use client';
+
+import ProtectedRoute from '../../components/ProtectedRoute';
 import CooperativaDashboard from '../../components/dashboards/CooperativaDashboard';
 
 export default function CooperativaPage() {
-  return <CooperativaDashboard />;
+  return (
+    <ProtectedRoute allowedRoles={['COOPERATIVA']}>
+      <CooperativaDashboard />
+    </ProtectedRoute>
+  );
 }

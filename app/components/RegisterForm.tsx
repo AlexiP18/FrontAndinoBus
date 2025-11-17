@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { Mail, Lock, User, CreditCard, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/app/context/AuthContext';
 
 export default function RegisterForm() {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -66,16 +68,10 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      // Simulación de API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // TODO: Implementar llamada a tu API
-      console.log('Register:', formData);
-      
-      // Redirigir después del registro exitoso
-      // router.push('/login');
-    } catch (err) {
-      setErrors({ general: 'Error al registrar usuario' });
+      await register(formData.email, formData.password, formData.nombre, formData.apellido);
+    } catch (err: any) {
+      console.error('Error en registro:', err);
+      setErrors({ general: err.message || 'Error al registrar usuario. Intenta con otro email.' });
     } finally {
       setLoading(false);
     }

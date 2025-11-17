@@ -1,41 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Users, Shield } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
+
+type TipoUsuario = 'CLIENTE' | 'COOPERATIVA' | 'ADMIN';
 
 export default function LoginForm() {
-  const router = useRouter();
+  const { login } = useAuth();
+  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>('CLIENTE');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'COOPERATIVA' | 'OFICINISTA' | 'CLIENTE'>('CLIENTE');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Aquí irá tu lógica de autenticación
     try {
-      // Simulación de API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // TODO: Implementar llamada a tu API
-      console.log('Login:', { email, password });
-      
-    if (selectedRole === 'CLIENTE') {
-  router.push('/dashboard/Cliente');
-} else if (selectedRole === 'COOPERATIVA') {
-  router.push('/dashboard/Cooperativa');
-} else if (selectedRole === 'OFICINISTA') {
-  router.push('/dashboard/Oficinista');
-}
-    } catch (err) {
-      setError('Credenciales incorrectas');
+      await login(email, password, tipoUsuario);
+    } catch (err: any) {
+      console.error('Error en login:', err);
+      setError(err.message || 'Credenciales incorrectas. Verifica tu email y contraseña.');
     } finally {
       setLoading(false);
     }
@@ -57,49 +47,51 @@ export default function LoginForm() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Role Selection - SOLO PARA PRUEBAS */}
+          {/* Selector de Tipo de Usuario */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de Usuario (Demo)
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Tipo de Usuario
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setSelectedRole('CLIENTE')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedRole === 'CLIENTE'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setTipoUsuario('CLIENTE')}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition ${
+                  tipoUsuario === 'CLIENTE'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
                 }`}
               >
-                Cliente
+                <User className="w-6 h-6 mb-1" />
+                <span className="text-xs font-medium">Cliente</span>
               </button>
+              
               <button
                 type="button"
-                onClick={() => setSelectedRole('OFICINISTA')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedRole === 'OFICINISTA'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setTipoUsuario('COOPERATIVA')}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition ${
+                  tipoUsuario === 'COOPERATIVA'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
                 }`}
               >
-                Oficinista
+                <Users className="w-6 h-6 mb-1" />
+                <span className="text-xs font-medium">Cooperativa</span>
               </button>
+              
               <button
                 type="button"
-                onClick={() => setSelectedRole('COOPERATIVA')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedRole === 'COOPERATIVA'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setTipoUsuario('ADMIN')}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition ${
+                  tipoUsuario === 'ADMIN'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
                 }`}
               >
-                Cooperativa
+                <Shield className="w-6 h-6 mb-1" />
+                <span className="text-xs font-medium">Admin</span>
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              ⚠️ Solo para pruebas. Selecciona el rol que quieres probar.
-            </p>
           </div>
 
           {/* Email Field */}
