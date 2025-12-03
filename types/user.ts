@@ -17,6 +17,7 @@ export interface User {
   apellidos?: string;
   cedula?: string;
   telefono?: string;
+  fotoUrl?: string;
   
   // Solo para rol COOPERATIVA
   rolCooperativa?: RolCooperativa; // ADMIN, OFICINISTA, CHOFER
@@ -37,6 +38,7 @@ export interface AuthResponse {
   rol: RolPrincipal;
   nombres?: string;
   apellidos?: string;
+  fotoUrl?: string;
   
   // Solo para COOPERATIVA
   rolCooperativa?: string;

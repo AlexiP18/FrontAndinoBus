@@ -5,19 +5,7 @@ import { Ticket, Calendar, MapPin, Clock, Download, Eye, QrCode } from 'lucide-r
 import { reservasApi, boletosApi, getToken, type ReservaDetalleResponse } from '@/lib/api';
 import Link from 'next/link';
 
-interface BoletoHistorial {
-  id: number;
-  codigo?: string;
-  viajeId: number;
-  fecha?: string;
-  origen?: string;
-  destino?: string;
-  cooperativa?: string;
-  horaSalida?: string;
-  asientos: string[];
-  monto: number;
-  estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO' | 'EXPIRADO';
-  cliente: string;
+interface BoletoHistorial extends ReservaDetalleResponse {
   qrCode?: string;
 }
 
@@ -54,13 +42,15 @@ export default function HistorialPage() {
       }
 
       // Llamar al endpoint real
-      const reservas: ReservaDetalleResponse[] = await reservasApi.misReservas(token);
+      console.log('Cargando reservas para cliente:', clienteEmail);
+      const reservas: ReservaDetalleResponse[] = await reservasApi.misReservas(token, clienteEmail);
+      console.log('Reservas obtenidas:', reservas);
       
       // Cargar QR para las reservas pagadas
       const boletosConQR = await Promise.all(
         reservas.map(async (reserva) => {
           let qrCode = undefined;
-          if (reserva.estado === 'PAGADO') {
+          if (reserva.estado?.toUpperCase() === 'PAGADO') {
             try {
               const boleto = await boletosApi.generar(reserva.id, token);
               qrCode = boleto.codigoQR;
@@ -70,12 +60,7 @@ export default function HistorialPage() {
           }
           
           return {
-            id: reserva.id,
-            viajeId: reserva.viajeId,
-            asientos: reserva.asientos,
-            monto: reserva.monto,
-            estado: reserva.estado as 'PENDIENTE' | 'PAGADO' | 'CANCELADO' | 'EXPIRADO',
-            cliente: reserva.cliente,
+            ...reserva,
             qrCode,
           } as BoletoHistorial;
         })
@@ -92,20 +77,21 @@ export default function HistorialPage() {
 
   const boletosFiltrados = filtroEstado === 'TODOS' 
     ? boletos 
-    : boletos.filter(b => b.estado === filtroEstado);
+    : boletos.filter(b => b.estado?.toUpperCase() === filtroEstado);
 
   const getEstadoBadge = (estado: string) => {
+    const estadoUpper = estado?.toUpperCase() || '';
     const estilos = {
       PENDIENTE: 'bg-yellow-100 text-yellow-800',
       PAGADO: 'bg-green-100 text-green-800',
       CANCELADO: 'bg-red-100 text-red-800',
       EXPIRADO: 'bg-gray-100 text-gray-800',
     };
-    return estilos[estado as keyof typeof estilos] || 'bg-gray-100 text-gray-800';
+    return estilos[estadoUpper as keyof typeof estilos] || 'bg-gray-100 text-gray-800';
   };
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -175,40 +161,58 @@ export default function HistorialPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-bold text-gray-800">
-                        Reserva #{boleto.id}
+                        {boleto.codigoBoleto || `Reserva #${boleto.id}`}
                       </h3>
                       <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getEstadoBadge(boleto.estado)}`}>
                         {boleto.estado}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">Viaje ID: {boleto.viajeId}</p>
+                    <p className="text-sm text-gray-600">{boleto.cooperativaNombre || 'Cooperativa'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-blue-600">${boleto.monto.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">Cliente: {boleto.cliente}</p>
+                    <p className="text-xs text-gray-500">{boleto.asientos.length} asiento(s)</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-t border-b border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <Ticket className="w-5 h-5 text-gray-400" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-t border-b border-gray-200">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
                     <div>
-                      <p className="text-xs text-gray-500">Asientos</p>
-                      <p className="text-sm font-medium text-gray-800">{boleto.asientos.join(', ')}</p>
+                      <p className="text-xs text-gray-500">Ruta</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {boleto.origen || 'Origen'} → {boleto.destino || 'Destino'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{boleto.rutaNombre || 'Ruta'}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-5 h-5 text-green-600 mt-0.5" />
                     <div>
-                      <p className="text-xs text-gray-500">Estado</p>
-                      <p className="text-sm font-medium text-gray-800">{boleto.estado}</p>
+                      <p className="text-xs text-gray-500">Fecha y Hora</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {boleto.fecha ? new Date(boleto.fecha).toLocaleDateString('es-EC') : 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        {boleto.horaSalida || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Ticket className="w-5 h-5 text-purple-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-gray-500">Asientos</p>
+                      <p className="text-sm font-medium text-gray-800">{boleto.asientos.join(', ')}</p>
+                      <p className="text-xs text-gray-500 mt-1">Bus: {boleto.busPlaca || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Mostrar QR si está pagado */}
-                {boleto.estado === 'PAGADO' && boleto.qrCode && (
+                {boleto.estado?.toUpperCase() === 'PAGADO' && boleto.qrCode && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-4">
                       <img 
@@ -229,7 +233,7 @@ export default function HistorialPage() {
                 )}
 
                 <div className="flex gap-3 mt-4">
-                  {boleto.estado === 'PAGADO' && boleto.qrCode && (
+                  {boleto.estado?.toUpperCase() === 'PAGADO' && boleto.qrCode && (
                     <button
                       onClick={() => {
                         const link = document.createElement('a');
@@ -243,7 +247,7 @@ export default function HistorialPage() {
                       Descargar QR
                     </button>
                   )}
-                  {boleto.estado === 'PENDIENTE' && (
+                  {boleto.estado?.toUpperCase() === 'PENDIENTE' && (
                     <Link
                       href={`/dashboard/Cliente/compra?reservaId=${boleto.id}`}
                       className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"

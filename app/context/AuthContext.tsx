@@ -52,21 +52,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, [mounted]);
 
-  const login = async (email: string, password: string, tipoUsuario: 'CLIENTE' | 'COOPERATIVA' | 'ADMIN' = 'CLIENTE') => {
-    // Seleccionar el endpoint correcto según el tipo de usuario
-    let response: AuthResponse;
-    
-    switch (tipoUsuario) {
-      case 'ADMIN':
-        response = await authApi.loginAdmin({ email, password });
-        break;
-      case 'COOPERATIVA':
-        response = await authApi.loginCooperativa({ email, password });
-        break;
-      case 'CLIENTE':
-      default:
-        response = await authApi.loginCliente({ email, password });
-        break;
+  const login = async (email: string, password: string, tipoUsuario?: 'CLIENTE' | 'COOPERATIVA' | 'ADMIN') => {
+    let response: AuthResponse | null = null;
+    let lastError: Error | null = null;
+
+    // Si se especifica tipo de usuario, intentar solo ese endpoint
+    if (tipoUsuario) {
+      switch (tipoUsuario) {
+        case 'ADMIN':
+          response = await authApi.loginAdmin({ email, password });
+          break;
+        case 'COOPERATIVA':
+          response = await authApi.loginCooperativa({ email, password });
+          break;
+        case 'CLIENTE':
+          response = await authApi.loginCliente({ email, password });
+          break;
+      }
+    } else {
+      // Auto-detectar: intentar en orden Cliente -> Cooperativa -> Admin
+      const loginAttempts = [
+        { tipo: 'CLIENTE', fn: () => authApi.loginCliente({ email, password }) },
+        { tipo: 'COOPERATIVA', fn: () => authApi.loginCooperativa({ email, password }) },
+        { tipo: 'ADMIN', fn: () => authApi.loginAdmin({ email, password }) },
+      ];
+
+      for (const attempt of loginAttempts) {
+        try {
+          response = await attempt.fn();
+          console.log(`✅ Login exitoso como ${attempt.tipo}`);
+          break; // Salir del loop si el login es exitoso
+        } catch (error: any) {
+          console.log(`❌ Intento fallido como ${attempt.tipo}`);
+          lastError = error;
+          // Continuar con el siguiente intento
+        }
+      }
+
+      // Si ningún intento funcionó, lanzar el último error
+      if (!response) {
+        throw lastError || new Error('Credenciales incorrectas');
+      }
     }
     
     // Guardar token
@@ -76,11 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userData: MeResponse = {
       userId: response.userId,
       email: response.email,
-      rol: response.rol,
+      rol: response.rol as 'CLIENTE' | 'COOPERATIVA' | 'ADMIN',
       nombres: response.nombres,
       apellidos: response.apellidos,
       // Campos adicionales para COOPERATIVA
-      rolCooperativa: response.rolCooperativa,
+      rolCooperativa: response.rolCooperativa as 'ADMIN' | 'OFICINISTA' | 'CHOFER' | undefined,
       cooperativaId: response.cooperativaId,
       cooperativaNombre: response.cooperativaNombre,
       cedula: response.cedula,
@@ -133,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userData: MeResponse = {
       userId: response.userId,
       email: response.email,
-      rol: response.rol,
+      rol: response.rol as 'CLIENTE' | 'COOPERATIVA' | 'ADMIN',
       nombres: response.nombres,
       apellidos: response.apellidos,
     };

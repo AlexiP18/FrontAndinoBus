@@ -95,9 +95,15 @@ function ReservaPageContent() {
   const handleDescargarBoleto = () => {
     if (!boleto) return;
     
+    const qrUrl = boleto.qr || boleto.qrUrl;
+    if (!qrUrl) {
+      alert('No hay código QR disponible para descargar');
+      return;
+    }
+    
     // Crear un elemento temporal para descargar el QR
     const link = document.createElement('a');
-    link.href = boleto.qr;
+    link.href = qrUrl;
     link.download = `boleto-${boleto.codigo}.png`;
     document.body.appendChild(link);
     link.click();

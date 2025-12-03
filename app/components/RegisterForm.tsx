@@ -126,9 +126,7 @@ export default function RegisterForm() {
                 type="text"
                 value={formData.nombre}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-2.5 border ${
-                  errors.nombre ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-4 py-2.5 border ${errors.nombre ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
             </div>
@@ -150,9 +148,7 @@ export default function RegisterForm() {
                 type="text"
                 value={formData.apellido}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-2.5 border ${
-                  errors.apellido ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-4 py-2.5 border ${errors.apellido ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
             </div>
@@ -175,9 +171,7 @@ export default function RegisterForm() {
                 value={formData.cedula}
                 onChange={handleChange}
                 maxLength={10}
-                className={`w-full pl-10 pr-4 py-2.5 border ${
-                  errors.cedula ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-4 py-2.5 border ${errors.cedula ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
             </div>
@@ -199,9 +193,7 @@ export default function RegisterForm() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-2.5 border ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-4 py-2.5 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
             </div>
@@ -223,9 +215,7 @@ export default function RegisterForm() {
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-2.5 border ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-12 py-2.5 border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
               <button
@@ -254,9 +244,7 @@ export default function RegisterForm() {
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-2.5 border ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition`}
+                className={`w-full pl-10 pr-12 py-2.5 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900`}
                 placeholder=""
               />
               <button

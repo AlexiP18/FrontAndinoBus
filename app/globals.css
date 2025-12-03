@@ -3,6 +3,41 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Colores por defecto - se sobrescriben dinámicamente */
+  --color-primary: #1E40AF;
+  --color-primary-h: 224;
+  --color-primary-s: 76%;
+  --color-primary-l: 40%;
+  --color-primary-50: hsl(224, 76%, 95%);
+  --color-primary-100: hsl(224, 76%, 90%);
+  --color-primary-200: hsl(224, 76%, 80%);
+  --color-primary-300: hsl(224, 76%, 70%);
+  --color-primary-400: hsl(224, 76%, 60%);
+  --color-primary-500: #1E40AF;
+  --color-primary-600: hsl(224, 76%, 30%);
+  --color-primary-700: hsl(224, 76%, 20%);
+  --color-primary-800: hsl(224, 76%, 15%);
+  --color-primary-900: hsl(224, 76%, 10%);
+  
+  --color-secondary: #3B82F6;
+  --color-secondary-h: 217;
+  --color-secondary-s: 91%;
+  --color-secondary-l: 60%;
+  --color-secondary-50: hsl(217, 91%, 95%);
+  --color-secondary-100: hsl(217, 91%, 90%);
+  --color-secondary-500: #3B82F6;
+  --color-secondary-600: hsl(217, 91%, 50%);
+  --color-secondary-700: hsl(217, 91%, 40%);
+  
+  --color-accent: #10B981;
+  --color-accent-h: 160;
+  --color-accent-s: 84%;
+  --color-accent-l: 39%;
+  --color-accent-50: hsl(160, 84%, 95%);
+  --color-accent-100: hsl(160, 84%, 90%);
+  --color-accent-500: #10B981;
+  --color-accent-600: hsl(160, 84%, 29%);
 }
 
 @theme inline {
@@ -23,4 +58,215 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Clases utilitarias para colores dinámicos */
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-primary-50 { background-color: var(--color-primary-50) !important; }
+.bg-primary-100 { background-color: var(--color-primary-100) !important; }
+.bg-primary-500 { background-color: var(--color-primary-500) !important; }
+.bg-primary-600 { background-color: var(--color-primary-600) !important; }
+.bg-primary-700 { background-color: var(--color-primary-700) !important; }
+
+.text-primary { color: var(--color-primary) !important; }
+.text-primary-600 { color: var(--color-primary-600) !important; }
+.text-primary-700 { color: var(--color-primary-700) !important; }
+
+.border-primary { border-color: var(--color-primary) !important; }
+.border-primary-500 { border-color: var(--color-primary-500) !important; }
+
+.ring-primary { --tw-ring-color: var(--color-primary) !important; }
+
+.bg-secondary { background-color: var(--color-secondary) !important; }
+.bg-secondary-50 { background-color: var(--color-secondary-50) !important; }
+.bg-secondary-100 { background-color: var(--color-secondary-100) !important; }
+.text-secondary { color: var(--color-secondary) !important; }
+
+.bg-accent { background-color: var(--color-accent) !important; }
+.bg-accent-50 { background-color: var(--color-accent-50) !important; }
+.text-accent { color: var(--color-accent) !important; }
+
+/* Hover states */
+.hover\:bg-primary-600:hover { background-color: var(--color-primary-600) !important; }
+.hover\:bg-primary-700:hover { background-color: var(--color-primary-700) !important; }
+
+/* ============================================
+   ESTILOS DINÁMICOS PARA COOPERATIVA
+   ============================================ */
+
+:root {
+  /* Colores de cooperativa por defecto - se sobrescriben desde CooperativaConfigContext */
+  --coop-color-primary: #16a34a;
+  --coop-color-secondary: #15803d;
+  --coop-primary-light: rgb(74, 222, 128);
+  --coop-primary-lighter: rgb(187, 247, 208);
+  --coop-primary-dark: rgb(21, 128, 61);
+  --coop-primary-hover: rgb(20, 83, 45);
+  --coop-secondary-light: rgb(74, 222, 128);
+  --coop-secondary-lighter: rgb(220, 252, 231);
+  --coop-secondary-dark: rgb(20, 83, 45);
+  --coop-primary-rgb: 22, 163, 74;
+  --coop-secondary-rgb: 21, 128, 61;
+}
+
+/* Backgrounds */
+.coop-bg-primary { background-color: var(--coop-color-primary) !important; }
+.coop-bg-secondary { background-color: var(--coop-color-secondary) !important; }
+.coop-bg-primary-light { background-color: var(--coop-primary-light) !important; }
+.coop-bg-primary-lighter { background-color: var(--coop-primary-lighter) !important; }
+.coop-bg-secondary-lighter { background-color: var(--coop-secondary-lighter) !important; }
+.coop-bg-primary-10 { background-color: rgba(var(--coop-primary-rgb), 0.1) !important; }
+.coop-bg-primary-20 { background-color: rgba(var(--coop-primary-rgb), 0.2) !important; }
+
+/* Text colors */
+.coop-text-primary { color: var(--coop-color-primary) !important; }
+.coop-text-secondary { color: var(--coop-color-secondary) !important; }
+.coop-text-primary-dark { color: var(--coop-primary-dark) !important; }
+
+/* Border colors */
+.coop-border-primary { border-color: var(--coop-color-primary) !important; }
+.coop-border-secondary { border-color: var(--coop-color-secondary) !important; }
+.coop-border-primary-light { border-color: var(--coop-primary-light) !important; }
+
+/* Ring/Focus colors */
+.coop-ring-primary { --tw-ring-color: var(--coop-color-primary) !important; }
+.coop-focus-primary:focus { 
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--coop-primary-rgb), 0.5);
+  border-color: var(--coop-color-primary);
+}
+
+/* Hover states */
+.coop-hover-bg-primary:hover { background-color: var(--coop-color-primary) !important; }
+.coop-hover-bg-primary-dark:hover { background-color: var(--coop-primary-dark) !important; }
+.coop-hover-bg-primary-hover:hover { background-color: var(--coop-primary-hover) !important; }
+.coop-hover-bg-primary-10:hover { background-color: rgba(var(--coop-primary-rgb), 0.1) !important; }
+.coop-hover-text-primary:hover { color: var(--coop-color-primary) !important; }
+.coop-hover-border-primary:hover { border-color: var(--coop-color-primary) !important; }
+
+/* Gradient backgrounds */
+.coop-bg-gradient { 
+  background: linear-gradient(to right, var(--coop-color-primary), var(--coop-color-secondary)) !important; 
+}
+.coop-bg-gradient-br { 
+  background: linear-gradient(to bottom right, var(--coop-color-primary), var(--coop-color-secondary)) !important; 
+}
+.coop-bg-gradient-light {
+  background: linear-gradient(to right, var(--coop-primary-lighter), rgba(var(--coop-secondary-rgb), 0.1)) !important;
+}
+
+/* Botón primario de cooperativa */
+.coop-btn-primary {
+  background-color: var(--coop-color-primary);
+  color: white;
+  transition: all 0.2s ease;
+}
+.coop-btn-primary:hover {
+  background-color: var(--coop-primary-dark);
+}
+.coop-btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--coop-primary-rgb), 0.3);
+}
+.coop-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón secundario de cooperativa */
+.coop-btn-secondary {
+  background-color: var(--coop-color-secondary);
+  color: white;
+  transition: all 0.2s ease;
+}
+.coop-btn-secondary:hover {
+  background-color: var(--coop-secondary-dark);
+}
+
+/* Botón outline de cooperativa */
+.coop-btn-outline {
+  background-color: transparent;
+  border: 2px solid var(--coop-color-primary);
+  color: var(--coop-color-primary);
+  transition: all 0.2s ease;
+}
+.coop-btn-outline:hover {
+  background-color: var(--coop-color-primary);
+  color: white;
+}
+
+/* Botón ghost de cooperativa */
+.coop-btn-ghost {
+  background-color: transparent;
+  color: var(--coop-color-primary);
+  transition: all 0.2s ease;
+}
+.coop-btn-ghost:hover {
+  background-color: rgba(var(--coop-primary-rgb), 0.1);
+}
+
+/* Input con focus de cooperativa */
+.coop-input-focus:focus {
+  outline: none;
+  border-color: var(--coop-color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--coop-primary-rgb), 0.1);
+}
+
+/* Checkbox/Radio de cooperativa */
+.coop-checkbox:checked,
+.coop-radio:checked {
+  background-color: var(--coop-color-primary);
+  border-color: var(--coop-color-primary);
+}
+
+/* Tab activo de cooperativa */
+.coop-tab-active {
+  border-bottom: 2px solid var(--coop-color-primary);
+  color: var(--coop-color-primary);
+}
+
+/* Badge de cooperativa */
+.coop-badge {
+  background-color: rgba(var(--coop-primary-rgb), 0.1);
+  color: var(--coop-color-primary);
+}
+.coop-badge-solid {
+  background-color: var(--coop-color-primary);
+  color: white;
+}
+
+/* Card seleccionada de cooperativa */
+.coop-card-selected {
+  border: 2px solid var(--coop-color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--coop-primary-rgb), 0.1);
+}
+
+/* Link de cooperativa */
+.coop-link {
+  color: var(--coop-color-primary);
+  transition: color 0.2s ease;
+}
+.coop-link:hover {
+  color: var(--coop-primary-dark);
+}
+
+/* Scrollbar de cooperativa */
+.coop-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--coop-color-primary);
+  border-radius: 4px;
+}
+
+/* Progress bar de cooperativa */
+.coop-progress-bar {
+  background-color: var(--coop-color-primary);
+}
+
+/* Switch de cooperativa */
+.coop-switch:checked {
+  background-color: var(--coop-color-primary);
+}
+
+/* Avatar con borde de cooperativa */
+.coop-avatar-border {
+  border: 2px solid var(--coop-color-primary);
 }

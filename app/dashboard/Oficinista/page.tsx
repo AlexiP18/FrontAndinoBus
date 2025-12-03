@@ -12,7 +12,7 @@ import DashboardNavbar from '../../components/layout/DashboardNavbar';
 
 export default function OficinistaPage() {
   return (
-    <ProtectedRoute allowedRoles={['OFICINISTA']}>
+    <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['OFICINISTA']}>
       <OficinistaPageContent />
     </ProtectedRoute>
   );
@@ -75,7 +75,7 @@ function OficinistaPageContent() {
     try {
       const token = getToken();
       const payload = {
-        rutaId: rutaSeleccionada.id,
+        frecuenciaId: rutaSeleccionada.frecuenciaId,
         asientos: asientosSeleccionados,
         pasajeros: datosPasajeros,
       };
@@ -116,7 +116,7 @@ function OficinistaPageContent() {
 
     let total = 0;
     datosPasajeros.forEach((pasajero) => {
-      let precio = rutaSeleccionada.precio;
+      let precio = rutaSeleccionada.precio ?? rutaSeleccionada.precioBase ?? 0;
 
       // Aplicar descuentos
       if (pasajero.tipoPasajero === TIPO_PASAJERO.MENOR_EDAD) {
@@ -277,7 +277,8 @@ function OficinistaPageContent() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Selecciona los asientos</h2>
           <AsientoMapa
-            rutaId={rutaSeleccionada.id}
+            frecuenciaId={rutaSeleccionada.frecuenciaId}
+            fecha={rutaSeleccionada.fecha}
             onAsientosChange={handleAsientosChange}
           />
           <div className="mt-6 flex justify-end">

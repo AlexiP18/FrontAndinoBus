@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import BusquedaRutas from '../../components/BusquedaRutas';
 import { RutaItem } from '@/lib/api';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Navigation } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import DashboardNavbar from '../../components/layout/DashboardNavbar';
@@ -21,6 +21,13 @@ export default function ClientePage() {
     <ProtectedRoute allowedRoles={['CLIENTE']}>
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar title="Dashboard Cliente">
+          <Link
+            href="/dashboard/Cliente/tracking"
+            className="flex items-center gap-2 px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+          >
+            <Navigation className="w-5 h-5" />
+            <span className="font-medium">Tracking de Viajes</span>
+          </Link>
           <Link
             href="/dashboard/Cliente/boletos"
             className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

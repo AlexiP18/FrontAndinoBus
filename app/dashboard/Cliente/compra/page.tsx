@@ -13,6 +13,7 @@ export default function CompraPage() {
   const [paso, setPaso] = useState(1); // 1: asientos, 2: datos, 3: pago, 4: confirmación
   const [rutaSeleccionada, setRutaSeleccionada] = useState<RutaItem | null>(null);
   const [asientosSeleccionados, setAsientosSeleccionados] = useState<string[]>([]);
+  const [viajeIdReal, setViajeIdReal] = useState<number | null>(null); // ID real del viaje
   const [reservaId, setReservaId] = useState<number | null>(null);
   const [boletoQR, setBoletoQR] = useState<string | null>(null);
   const [codigoBoleto, setCodigoBoleto] = useState<string | null>(null);
@@ -102,6 +103,12 @@ export default function CompraPage() {
   const handleContinuarDatos = async () => {
     if (!validarDatosPasajeros()) return;
 
+    // Verificar que tenemos el viajeId real
+    if (!viajeIdReal) {
+      setError('Error: No se pudo obtener el ID del viaje. Por favor, vuelve a seleccionar los asientos.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -111,10 +118,10 @@ export default function CompraPage() {
       const userData = userDataStr ? JSON.parse(userDataStr) : null;
       const clienteEmail = userData?.email || datosPasajeros[0]?.email;
 
-      // Crear reserva con nuevo endpoint
+      // Crear reserva con el viajeId real (no frecuenciaId)
       const token = getToken();
       const response = await reservasApi.crear({
-        viajeId: rutaSeleccionada!.frecuenciaId,
+        viajeId: viajeIdReal,
         asientos: asientosSeleccionados,
         tipoAsiento: 'NORMAL',
         clienteEmail: clienteEmail,
@@ -227,10 +234,10 @@ export default function CompraPage() {
         {paso === 1 && (
           <div>
             <AsientoMapa
-              viajeId={rutaSeleccionada.frecuenciaId}
-              totalAsientos={40}
-              asientosOcupados={[]}
+              frecuenciaId={rutaSeleccionada.frecuenciaId}
+              fecha={rutaSeleccionada.fecha}
               onAsientosChange={setAsientosSeleccionados}
+              onViajeIdChange={setViajeIdReal}
               maxSeleccion={5}
             />
             {asientosSeleccionados.length > 0 && (
@@ -272,7 +279,7 @@ export default function CompraPage() {
                         value={datosPasajeros[index]?.nombre || ''}
                         onChange={(e) => actualizarDatosPasajero(index, 'nombre', e.target.value)}
                         placeholder="Juan Pérez"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                         required
                       />
                     </div>
@@ -288,7 +295,7 @@ export default function CompraPage() {
                         onChange={(e) => actualizarDatosPasajero(index, 'cedula', e.target.value)}
                         placeholder="1234567890"
                         maxLength={10}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                         required
                       />
                     </div>
@@ -303,7 +310,7 @@ export default function CompraPage() {
                         value={datosPasajeros[index]?.email || ''}
                         onChange={(e) => actualizarDatosPasajero(index, 'email', e.target.value)}
                         placeholder="correo@ejemplo.com"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                         required
                       />
                     </div>
@@ -316,7 +323,7 @@ export default function CompraPage() {
                       <select
                         value={datosPasajeros[index]?.tipoPasajero || TIPO_PASAJERO.REGULAR}
                         onChange={(e) => actualizarDatosPasajero(index, 'tipoPasajero', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
                       >
                         <option value={TIPO_PASAJERO.REGULAR}>Regular</option>
                         <option value={TIPO_PASAJERO.MENOR_EDAD}>Menor de Edad (15% desc.)</option>

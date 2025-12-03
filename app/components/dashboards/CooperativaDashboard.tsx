@@ -21,6 +21,8 @@ import {
 import { cooperativaApi, getToken, ResumenDisponibilidadDto } from '@/lib/api';
 import GestionBuses from '../cooperativa/GestionBuses';
 import GestionAsignaciones from '../cooperativa/GestionAsignaciones';
+import PanelTrackingCooperativa from '../PanelTrackingCooperativa';
+import ModalMapaTracking from '../ModalMapaTracking';
 
 export default function CooperativaDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -51,6 +53,7 @@ export default function CooperativaDashboard() {
 
   const menuItems = [
     { id: 'overview', label: 'Panel de Control', icon: BarChart3 },
+    { id: 'tracking', label: 'Tracking de Flota', icon: MapPin },
     { id: 'buses', label: 'Gestión de Buses', icon: Bus },
     { id: 'frecuencias', label: 'Frecuencias y Rutas', icon: Route },
     { id: 'asignaciones', label: 'Asignaciones', icon: Calendar },
@@ -268,6 +271,10 @@ export default function CooperativaDashboard() {
             <GestionAsignaciones cooperativaId={cooperativaId} />
           )}
 
+          {activeSection === 'tracking' && (
+            <TrackingSection cooperativaId={cooperativaId} />
+          )}
+
           {activeSection === 'frecuencias' && (
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex items-center justify-between mb-6">
@@ -322,5 +329,97 @@ export default function CooperativaDashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Componente para la sección de tracking
+interface TrackingSectionProps {
+  cooperativaId: number;
+}
+
+function TrackingSection({ cooperativaId }: TrackingSectionProps) {
+  const [viajesActivos, setViajesActivos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viajeSeleccionado, setViajeSeleccionado] = useState<number | null>(null);
+
+  useEffect(() => {
+    cargarViajesActivos();
+  }, [cooperativaId]);
+
+  const cargarViajesActivos = async () => {
+    try {
+      setLoading(true);
+      const token = getToken();
+      if (!token) return;
+
+      // Importar el API de viajes activos
+      const { viajesActivosApi } = await import('@/lib/api');
+
+      // Obtener viajes activos de la cooperativa desde el backend
+      const viajes = await viajesActivosApi.obtenerViajesPorCooperativa(cooperativaId, token);
+      
+      // Mapear al formato esperado por el componente
+      const viajesFormateados = viajes.map(viaje => ({
+        id: viaje.viajeId,
+        busPlaca: viaje.busPlaca,
+        rutaOrigen: viaje.rutaOrigen,
+        rutaDestino: viaje.rutaDestino,
+        choferNombre: viaje.choferNombreCompleto || `${viaje.choferNombre} ${viaje.choferApellido}`,
+        horaSalida: viaje.horaSalida,
+        estado: viaje.estado,
+      }));
+      
+      setViajesActivos(viajesFormateados);
+    } catch (error) {
+      console.error('Error cargando viajes activos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerDetalles = (viajeId: number) => {
+    setViajeSeleccionado(viajeId);
+  };
+
+  const handleCerrarModal = () => {
+    setViajeSeleccionado(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+        <p className="mt-4 text-gray-600">Cargando viajes activos...</p>
+      </div>
+    );
+  }
+
+  const token = getToken();
+  if (!token) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-700">No se encontró token de autenticación</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <PanelTrackingCooperativa
+        viajesActivos={viajesActivos}
+        token={token}
+        onVerDetalles={handleVerDetalles}
+      />
+      
+      {/* Modal de detalles */}
+      {viajeSeleccionado && (
+        <ModalMapaTracking
+          viajeId={viajeSeleccionado}
+          token={token}
+          onClose={handleCerrarModal}
+          titulo={`Tracking - Viaje #${viajeSeleccionado}`}
+        />
+      )}
+    </>
   );
 }

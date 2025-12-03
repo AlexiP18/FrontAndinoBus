@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 
-export default function SeleccionAsientos() {
+function SeleccionAsientosContent() {
   const searchParams = useSearchParams();
   const bus = searchParams.get('bus');
   const precio = Number(searchParams.get('precio')) || 0;
@@ -200,5 +200,17 @@ export default function SeleccionAsientos() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SeleccionAsientos() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SeleccionAsientosContent />
+    </Suspense>
   );
 }
