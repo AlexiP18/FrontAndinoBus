@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { viajeChoferApi, CalificacionesChoferResponse, getToken } from '@/lib/api';
 import {
@@ -18,10 +19,15 @@ import {
 
 export default function CalificacionesChoferPage() {
   const { user } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
   const router = useRouter();
   const [calificaciones, setCalificaciones] = useState<CalificacionesChoferResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
 
   useEffect(() => {
     loadCalificaciones();
@@ -94,13 +100,16 @@ export default function CalificacionesChoferPage() {
           <div className="mb-6">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium mb-4"
+              className="flex items-center gap-2 font-medium mb-4 transition-colors"
+              style={{ color: primaryColor }}
+              onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver
             </button>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-              <Award className="w-8 h-8 text-orange-600" />
+              <Award className="w-8 h-8" style={{ color: primaryColor }} />
               Mis Calificaciones
             </h1>
             <p className="text-gray-600 mt-2">
@@ -111,7 +120,10 @@ export default function CalificacionesChoferPage() {
           {/* Loading */}
           {loading && (
             <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+              <div 
+                className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+                style={{ borderColor: primaryColor }}
+              ></div>
               <p className="text-gray-600">Cargando calificaciones...</p>
             </div>
           )}
@@ -184,7 +196,7 @@ export default function CalificacionesChoferPage() {
               ) : (
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                    <MessageCircle className="w-6 h-6 text-orange-600" />
+                    <MessageCircle className="w-6 h-6" style={{ color: primaryColor }} />
                     Comentarios de Pasajeros ({calificaciones.calificaciones.length})
                   </h2>
 
@@ -229,7 +241,7 @@ export default function CalificacionesChoferPage() {
 
               {/* Estadísticas adicionales */}
               {calificaciones.totalCalificaciones > 0 && (
-                <div className="mt-6 bg-gradient-to-r from-orange-600 to-orange-800 rounded-lg shadow-lg p-6 text-white">
+                <div className="mt-6 bg-linear-to-r from-orange-600 to-orange-800 rounded-lg shadow-lg p-6 text-white">
                   <div className="flex items-center gap-3 mb-4">
                     <TrendingUp className="w-6 h-6" />
                     <h3 className="text-xl font-semibold">Tu Desempeño</h3>

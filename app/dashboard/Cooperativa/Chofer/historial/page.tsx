@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { viajeChoferApi, ViajeHistorial, getToken } from '@/lib/api';
 import {
@@ -20,12 +21,17 @@ import {
 
 export default function HistorialViajesPage() {
   const { user } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
   const router = useRouter();
   const [historial, setHistorial] = useState<ViajeHistorial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
   const [filtroFechaFin, setFiltroFechaFin] = useState('');
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
 
   useEffect(() => {
     loadHistorial();
@@ -120,13 +126,16 @@ export default function HistorialViajesPage() {
           <div className="mb-6">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium mb-4"
+              className="flex items-center gap-2 font-medium mb-4 transition-colors"
+              style={{ color: primaryColor }}
+              onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver
             </button>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-orange-600" />
+              <TrendingUp className="w-8 h-8" style={{ color: primaryColor }} />
               Historial de Viajes
             </h1>
             <p className="text-gray-600 mt-2">
@@ -149,7 +158,8 @@ export default function HistorialViajesPage() {
                   type="date"
                   value={filtroFechaInicio}
                   onChange={(e) => setFiltroFechaInicio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent text-gray-800"
+                  style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                 />
               </div>
               <div>
@@ -160,13 +170,17 @@ export default function HistorialViajesPage() {
                   type="date"
                   value={filtroFechaFin}
                   onChange={(e) => setFiltroFechaFin(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent text-gray-800"
+                  style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                 />
               </div>
               <div className="flex items-end gap-2">
                 <button
                   onClick={aplicarFiltro}
-                  className="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  className="flex-1 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                  style={{ backgroundColor: primaryColor }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = secondaryColor}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = primaryColor}
                 >
                   Aplicar
                 </button>
@@ -183,7 +197,10 @@ export default function HistorialViajesPage() {
           {/* Loading */}
           {loading && (
             <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+              <div 
+                className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+                style={{ borderColor: primaryColor }}
+              ></div>
               <p className="text-gray-600">Cargando historial...</p>
             </div>
           )}
@@ -191,7 +208,7 @@ export default function HistorialViajesPage() {
           {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+              <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
               <p className="text-red-800">{error}</p>
             </div>
           )}
@@ -284,7 +301,10 @@ export default function HistorialViajesPage() {
                           </div>
                           <button
                             onClick={() => router.push(`/dashboard/Cooperativa/Chofer/viaje/${viaje.id}/calificaciones`)}
-                            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                            className="text-sm font-medium transition-colors"
+                            style={{ color: primaryColor }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+                            onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
                           >
                             Ver detalles →
                           </button>

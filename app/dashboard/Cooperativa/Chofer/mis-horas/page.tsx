@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { getToken } from '@/lib/api';
 import {
   Clock,
@@ -12,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Bus
+  Bus,
+  ArrowLeft
 } from 'lucide-react';
 
 interface ResumenDia {
@@ -36,6 +40,11 @@ interface ResumenHoras {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Normalize API_BASE to remove trailing /api if present (to avoid /api/api)
+const getApiBase = () => {
+  const base = API_BASE.replace(/\/api\/?$/, '');
+  return base;
+};
 
 const DIAS_SEMANA: Record<string, string> = {
   'MONDAY': 'Lunes',
@@ -49,25 +58,36 @@ const DIAS_SEMANA: Record<string, string> = {
 
 export default function MisHorasPage() {
   const { user } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
+  const router = useRouter();
   const [resumen, setResumen] = useState<ResumenHoras | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState('');
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
+
+  // Inicializar fecha en el cliente para evitar hydration mismatch
+  useEffect(() => {
+    setFechaSeleccionada(new Date().toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
-    if (user?.userId) {
+    if (user?.userId && fechaSeleccionada) {
       cargarResumen();
     }
   }, [user, fechaSeleccionada]);
 
   const cargarResumen = async () => {
-    if (!user?.userId) return;
+    if (!user?.userId || !fechaSeleccionada) return;
     
     try {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        `${API_BASE}/api/asignaciones/chofer/${user.userId}/resumen-horas?fecha=${fechaSeleccionada}`,
+        `${getApiBase()}/api/asignaciones/chofer/${user.userId}/resumen-horas?fecha=${fechaSeleccionada}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -107,23 +127,39 @@ export default function MisHorasPage() {
     return 'bg-red-500';
   };
 
-  if (loading) {
+  if (loading || !fechaSeleccionada) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-      </div>
+      <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['CHOFER']}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2"
+            style={{ borderColor: primaryColor }}
+          ></div>
+        </div>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Clock className="w-8 h-8 text-orange-600" />
-          <h1 className="text-3xl font-bold text-gray-800">Mis Horas de Trabajo</h1>
-        </div>
-        <p className="text-gray-600">Control de jornada laboral semanal</p>
+    <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['CHOFER']}>
+      <div className="min-h-screen bg-gray-50 p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 font-medium mb-4 transition-colors"
+            style={{ color: primaryColor }}
+            onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+            onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Volver
+          </button>
+          <div className="flex items-center gap-3 mb-2">
+            <Clock className="w-8 h-8" style={{ color: primaryColor }} />
+            <h1 className="text-3xl font-bold text-gray-800">Mis Horas de Trabajo</h1>
+          </div>
+          <p className="text-gray-600">Control de jornada laboral semanal</p>
       </div>
 
       {/* Selector de Semana */}
@@ -186,8 +222,8 @@ export default function MisHorasPage() {
 
             <div className="bg-white rounded-xl shadow-sm p-5">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                <div className="p-2 rounded-lg" style={{ backgroundColor: `${primaryColor}20` }}>
+                  <TrendingUp className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
                 <p className="text-sm text-gray-500">Jornada Extendida</p>
               </div>
@@ -222,7 +258,7 @@ export default function MisHorasPage() {
                 <p className="text-sm text-gray-500">Estado</p>
               </div>
               {resumen.diasConJornadaExtendida >= 2 ? (
-                <div className="flex items-center gap-2 text-orange-600">
+                <div className="flex items-center gap-2" style={{ color: primaryColor }}>
                   <AlertTriangle className="w-5 h-5" />
                   <span className="font-medium">Límite Jornada</span>
                 </div>
@@ -252,12 +288,14 @@ export default function MisHorasPage() {
                     className={`px-6 py-4 flex items-center justify-between ${esHoy ? 'bg-blue-50' : ''}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        dia.horasTrabajadas > 0 ? 'bg-orange-100' : 'bg-gray-100'
-                      }`}>
-                        <span className={`text-lg font-bold ${
-                          dia.horasTrabajadas > 0 ? 'text-orange-600' : 'text-gray-400'
-                        }`}>
+                      <div 
+                        className="w-12 h-12 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: dia.horasTrabajadas > 0 ? `${primaryColor}20` : '#f3f4f6' }}
+                      >
+                        <span 
+                          className="text-lg font-bold"
+                          style={{ color: dia.horasTrabajadas > 0 ? primaryColor : '#9ca3af' }}
+                        >
                           {new Date(dia.fecha).getDate()}
                         </span>
                       </div>
@@ -291,7 +329,10 @@ export default function MisHorasPage() {
 
                       {/* Badge de jornada */}
                       {dia.jornadaExtendida && (
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                        <span 
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{ backgroundColor: `${primaryColor}20`, color: secondaryColor }}
+                        >
                           Jornada Extendida
                         </span>
                       )}
@@ -315,7 +356,7 @@ export default function MisHorasPage() {
                 <p>Jornada extendida: hasta <strong>10 horas</strong> (máximo 2 días/semana)</p>
               </div>
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 mt-0.5 text-orange-600 shrink-0" />
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: primaryColor }} />
                 <p>Al agotar jornadas extendidas, el límite diario será de 8 horas</p>
               </div>
               <div className="flex items-start gap-2">
@@ -327,5 +368,6 @@ export default function MisHorasPage() {
         </>
       )}
     </div>
+    </ProtectedRoute>
   );
 }

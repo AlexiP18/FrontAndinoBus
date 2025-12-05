@@ -93,7 +93,8 @@ export default function AdminLayout({
   };
 
   const activeMenuStyle = {
-    backgroundColor: config?.colorPrimario || undefined
+    backgroundColor: config?.colorPrimario || undefined,
+    color: '#ffffff'
   };
 
   const appName = config?.nombreAplicacion || 'AndinaBus';
@@ -165,7 +166,7 @@ export default function AdminLayout({
                   onClick={() => router.push(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                     item.active
-                      ? 'text-white shadow-md'
+                      ? 'shadow-md'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                   style={item.active ? activeMenuStyle : undefined}
@@ -270,7 +271,7 @@ export default function AdminLayout({
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                         item.active
-                          ? 'text-white shadow-md'
+                          ? 'shadow-md'
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                       style={item.active ? activeMenuStyle : undefined}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { viajeChoferApi, ViajeChofer, getToken } from '@/lib/api';
 import {
@@ -23,6 +24,7 @@ import {
 
 export default function MiViajeChoferPage() {
   const { user } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
   const router = useRouter();
   const [viaje, setViaje] = useState<ViajeChofer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,10 @@ export default function MiViajeChoferPage() {
   const [observaciones, setObservaciones] = useState('');
   const [mostrarModalFinalizar, setMostrarModalFinalizar] = useState(false);
   const [pasajeroVerificados, setPasajeroVerificados] = useState<Set<number>>(new Set());
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
 
   useEffect(() => {
     loadViaje();
@@ -156,7 +162,10 @@ export default function MiViajeChoferPage() {
           <div className="mb-6 flex items-center justify-between">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
+              className="flex items-center gap-2 font-medium transition-colors"
+              style={{ color: primaryColor }}
+              onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver
@@ -170,7 +179,10 @@ export default function MiViajeChoferPage() {
           {/* Loading */}
           {loading && (
             <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+              <div 
+                className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+                style={{ borderColor: primaryColor }}
+              ></div>
               <p className="text-gray-600">Cargando información del viaje...</p>
             </div>
           )}
@@ -178,7 +190,7 @@ export default function MiViajeChoferPage() {
           {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+              <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
               <p className="text-red-800">{error}</p>
             </div>
           )}
@@ -195,7 +207,10 @@ export default function MiViajeChoferPage() {
               </p>
               <button
                 onClick={() => router.push('/dashboard/Cooperativa/Chofer')}
-                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                className="text-white px-6 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: primaryColor }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = secondaryColor}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = primaryColor}
               >
                 Volver al Dashboard
               </button>
@@ -208,7 +223,7 @@ export default function MiViajeChoferPage() {
               {/* Card principal del viaje */}
               <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                 {/* Header del viaje */}
-                <div className="bg-gradient-to-r from-orange-600 to-orange-800 text-white p-6">
+                <div className="bg-linear-to-r from-orange-600 to-orange-800 text-white p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h2 className="text-2xl font-bold mb-1">Viaje #{viaje.id}</h2>
@@ -311,11 +326,11 @@ export default function MiViajeChoferPage() {
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <Users className="w-6 h-6 text-orange-600" />
+                    <Users className="w-6 h-6" style={{ color: primaryColor }} />
                     Lista de Pasajeros ({viaje.totalPasajeros})
                   </h3>
                   <div className="text-sm text-gray-600">
-                    Verificados: <span className="font-semibold text-orange-600">{pasajeroVerificados.size}</span> / {viaje.totalPasajeros}
+                    Verificados: <span className="font-semibold" style={{ color: primaryColor }}>{pasajeroVerificados.size}</span> / {viaje.totalPasajeros}
                   </div>
                 </div>
 

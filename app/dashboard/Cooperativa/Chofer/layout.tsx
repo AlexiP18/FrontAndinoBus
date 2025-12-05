@@ -1,7 +1,9 @@
 'use client';
 
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import { getFullName } from '@/lib/auth';
+import { resolveResourceUrl } from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Bus, 
@@ -11,7 +13,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Home
+  Home,
+  Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
@@ -22,6 +25,7 @@ export default function CooperativaChoferLayout({
   children: React.ReactNode;
 }) {
   const { user, logout } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,6 +33,21 @@ export default function CooperativaChoferLayout({
   const handleLogout = async () => {
     await logout();
     router.push('/login');
+  };
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
+  const coopName = cooperativaConfig?.nombre || user?.cooperativaNombre || 'Cooperativa';
+  const coopLogo = resolveResourceUrl(cooperativaConfig?.logoUrl);
+
+  // Estilos dinámicos
+  const headerStyle = {
+    background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`
+  };
+
+  const avatarStyle = {
+    backgroundColor: primaryColor
   };
 
   const menuItems = [
@@ -62,6 +81,12 @@ export default function CooperativaChoferLayout({
       path: '/dashboard/Cooperativa/Chofer/calificaciones',
       active: pathname?.startsWith('/dashboard/Cooperativa/Chofer/calificaciones'),
     },
+    {
+      icon: Clock,
+      label: 'Mis Horas',
+      path: '/dashboard/Cooperativa/Chofer/mis-horas',
+      active: pathname?.startsWith('/dashboard/Cooperativa/Chofer/mis-horas'),
+    },
   ];
 
   return (
@@ -70,17 +95,36 @@ export default function CooperativaChoferLayout({
         {/* Sidebar Desktop */}
         <aside className="hidden lg:flex lg:flex-col w-72 bg-white border-r border-gray-200 shadow-sm">
           {/* Logo y nombre cooperativa */}
-          <div className="h-20 flex items-center justify-center border-b border-gray-200 bg-linear-to-r from-orange-600 to-orange-700">
-            <div className="text-center">
-              <h1 className="text-xl font-bold text-white">AndinaBus</h1>
-              <p className="text-xs text-orange-100 mt-0.5">Chofer</p>
+          <div 
+            className="h-20 flex items-center justify-center border-b border-gray-200"
+            style={headerStyle}
+          >
+            <div className="flex items-center gap-3">
+              {coopLogo ? (
+                <img 
+                  src={coopLogo} 
+                  alt={coopName} 
+                  className="w-10 h-10 rounded-full object-cover bg-white"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                  <Bus className="w-6 h-6 text-white" />
+                </div>
+              )}
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-white truncate max-w-[160px]">{coopName}</h1>
+                <p className="text-xs text-white text-opacity-80 mt-0.5">Panel Chofer</p>
+              </div>
             </div>
           </div>
 
           {/* Info del usuario */}
           <div className="p-4 border-b border-gray-200 bg-linear-to-br from-gray-50 to-white">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                style={avatarStyle}
+              >
                 {user?.nombres?.charAt(0) || 'C'}
               </div>
               <div className="flex-1 min-w-0">
@@ -89,7 +133,10 @@ export default function CooperativaChoferLayout({
                 </p>
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 {user?.cooperativaNombre && (
-                  <p className="text-xs text-orange-600 font-medium truncate mt-0.5">
+                  <p 
+                    className="text-xs font-medium truncate mt-0.5"
+                    style={{ color: primaryColor }}
+                  >
                     🚌 {user.cooperativaNombre}
                   </p>
                 )}
@@ -112,9 +159,20 @@ export default function CooperativaChoferLayout({
                   onClick={() => router.push(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                     item.active
-                      ? 'bg-orange-600 text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-orange-600'
+                      ? 'shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
+                  style={item.active ? { backgroundColor: primaryColor, color: '#ffffff' } : undefined}
+                  onMouseEnter={(e) => {
+                    if (!item.active) {
+                      e.currentTarget.style.color = primaryColor;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!item.active) {
+                      e.currentTarget.style.color = '';
+                    }
+                  }}
                 >
                   <Icon className="w-5 h-5 shrink-0" />
                   <span className="font-medium text-sm">{item.label}</span>
@@ -140,14 +198,30 @@ export default function CooperativaChoferLayout({
           <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)}>
             <aside className="w-72 h-full bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
               {/* Header con botón cerrar */}
-              <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200 bg-linear-to-r from-orange-600 to-orange-700">
-                <div>
-                  <h1 className="text-xl font-bold text-white">AndinaBus</h1>
-                  <p className="text-xs text-orange-100">Chofer</p>
+              <div 
+                className="h-20 flex items-center justify-between px-4 border-b border-gray-200"
+                style={headerStyle}
+              >
+                <div className="flex items-center gap-3">
+                  {coopLogo ? (
+                    <img 
+                      src={coopLogo} 
+                      alt={coopName} 
+                      className="w-8 h-8 rounded-full object-cover bg-white"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                      <Bus className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-lg font-bold text-white truncate max-w-[140px]">{coopName}</h1>
+                    <p className="text-xs text-white text-opacity-80">Chofer</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="text-white hover:bg-orange-700 p-2 rounded-lg"
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -156,7 +230,10 @@ export default function CooperativaChoferLayout({
               {/* Info del usuario */}
               <div className="p-4 border-b border-gray-200 bg-linear-to-br from-gray-50 to-white">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                    style={avatarStyle}
+                  >
                     {user?.nombres?.charAt(0) || 'C'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -165,7 +242,10 @@ export default function CooperativaChoferLayout({
                     </p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     {user?.cooperativaNombre && (
-                      <p className="text-xs text-orange-600 font-medium truncate mt-0.5">
+                      <p 
+                        className="text-xs font-medium truncate mt-0.5"
+                        style={{ color: primaryColor }}
+                      >
                         🚌 {user.cooperativaNombre}
                       </p>
                     )}
@@ -191,9 +271,10 @@ export default function CooperativaChoferLayout({
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                         item.active
-                          ? 'bg-orange-600 text-white shadow-md'
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-orange-600'
+                          ? 'shadow-md'
+                          : 'text-gray-700 hover:bg-gray-100'
                       }`}
+                      style={item.active ? { backgroundColor: primaryColor, color: '#ffffff' } : undefined}
                     >
                       <Icon className="w-5 h-5 shrink-0" />
                       <span className="font-medium text-sm">{item.label}</span>
@@ -219,14 +300,17 @@ export default function CooperativaChoferLayout({
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header mobile */}
-          <header className="lg:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm">
+          <header 
+            className="lg:hidden h-16 flex items-center justify-between px-4 shadow-sm"
+            style={headerStyle}
+          >
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-gray-700 hover:bg-gray-100 p-2 rounded-lg"
+              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-bold text-gray-800">AndinaBus Chofer</h1>
+            <h1 className="text-lg font-bold text-white">{coopName}</h1>
             <div className="w-10"></div>
           </header>
 

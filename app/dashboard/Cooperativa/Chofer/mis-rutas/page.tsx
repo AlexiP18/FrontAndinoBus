@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import { viajeChoferApi, RutaChofer } from '@/lib/api';
 import { 
   MapPin, 
@@ -18,9 +19,14 @@ import {
 function MisRutasChoferPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { cooperativaConfig } = useCooperativaConfig();
   const [rutas, setRutas] = useState<RutaChofer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Colores dinámicos de la cooperativa
+  const primaryColor = cooperativaConfig?.colorPrimario || '#ea580c';
+  const secondaryColor = cooperativaConfig?.colorSecundario || '#c2410c';
 
   useEffect(() => {
     if (user?.userId) {
@@ -72,10 +78,13 @@ function MisRutasChoferPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 p-6">
+      <div className="min-h-screen bg-linear-to-br from-orange-50 to-blue-50 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+            <div 
+              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto"
+              style={{ borderColor: primaryColor }}
+            ></div>
             <p className="mt-4 text-gray-600">Cargando rutas...</p>
           </div>
         </div>
@@ -85,10 +94,10 @@ function MisRutasChoferPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 p-6">
+      <div className="min-h-screen bg-linear-to-br from-orange-50 to-blue-50 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
             <div>
               <h3 className="font-semibold text-red-800">Error al cargar rutas</h3>
               <p className="text-red-600 mt-1">{error}</p>
@@ -108,13 +117,16 @@ function MisRutasChoferPage() {
 
   return (
     <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['CHOFER']}>
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 p-6">
+      <div className="min-h-screen bg-linear-to-br from-orange-50 to-blue-50 p-6">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6 flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors"
+              className="flex items-center gap-2 font-medium transition-colors"
+              style={{ color: primaryColor }}
+              onMouseEnter={(e) => e.currentTarget.style.color = secondaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = primaryColor}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver
@@ -149,7 +161,7 @@ function MisRutasChoferPage() {
 
             <div className="bg-white rounded-lg shadow-md p-4">
               <div className="flex items-center gap-3">
-                <Calendar className="w-8 h-8 text-orange-600" />
+                <Calendar className="w-8 h-8" style={{ color: primaryColor }} />
                 <div>
                   <p className="text-gray-600 text-sm">Viajes Realizados</p>
                   <p className="text-2xl font-bold text-gray-800">{totalViajesRealizados}</p>
@@ -173,7 +185,7 @@ function MisRutasChoferPage() {
           {/* Lista de Rutas */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <RouteIcon className="w-6 h-6 text-orange-600" />
+              <RouteIcon className="w-6 h-6" style={{ color: primaryColor }} />
               Listado de Rutas
             </h2>
 
@@ -198,7 +210,7 @@ function MisRutasChoferPage() {
                       {/* Información de la ruta */}
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <MapPin className="w-6 h-6 text-orange-600 flex-shrink-0" />
+                          <MapPin className="w-6 h-6 shrink-0" style={{ color: primaryColor }} />
                           <div>
                             <h3 className="text-lg font-bold text-gray-800">
                               {ruta.origen} → {ruta.destino}
@@ -252,8 +264,11 @@ function MisRutasChoferPage() {
 
                       {/* Badge de experiencia */}
                       {ruta.totalViajesRealizados > 0 && (
-                        <div className="text-center bg-white rounded-lg px-4 py-2 shadow-sm border border-orange-200">
-                          <p className="text-2xl font-bold text-orange-600">{ruta.totalViajesRealizados}</p>
+                        <div 
+                          className="text-center bg-white rounded-lg px-4 py-2 shadow-sm border"
+                          style={{ borderColor: `${primaryColor}40` }}
+                        >
+                          <p className="text-2xl font-bold" style={{ color: primaryColor }}>{ruta.totalViajesRealizados}</p>
                           <p className="text-xs text-gray-600">viajes</p>
                         </div>
                       )}
@@ -268,7 +283,7 @@ function MisRutasChoferPage() {
           {rutas.length > 0 && (
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
                   <p className="font-semibold mb-1">Información sobre las rutas</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-700">
