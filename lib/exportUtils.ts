@@ -61,14 +61,29 @@ export function operaEnDia(diasOperacion: string, diaSemana: string): boolean {
 }
 
 /**
+ * Modo de asignación de buses en el reporte
+ * - 'fijo': Cada frecuencia siempre usa el mismo bus (comportamiento actual)
+ * - 'rotativo': Los buses rotan por los circuitos cada día (patrón escalonado tradicional)
+ */
+export type ModoAsignacion = 'fijo' | 'rotativo';
+
+/**
  * Genera el reporte de asignaciones de frecuencias por bus
+ * 
+ * @param frecuencias - Lista de frecuencias a incluir
+ * @param buses - Lista de buses de la cooperativa
+ * @param fechaInicio - Fecha de inicio del reporte
+ * @param fechaFin - Fecha de fin del reporte
+ * @param titulo - Título del reporte
+ * @param modoAsignacion - 'fijo' o 'rotativo' (escalonado)
  */
 export function generarReporteAsignaciones(
   frecuencias: FrecuenciaViaje[],
   buses: BusDetailResponse[],
   fechaInicio: Date,
   fechaFin: Date,
-  titulo: string = 'ASIGNACIÓN DE FRECUENCIAS'
+  titulo: string = 'ASIGNACIÓN DE FRECUENCIAS',
+  modoAsignacion: ModoAsignacion = 'fijo'
 ): ReporteAsignaciones {
   const fechas = generarRangoFechas(fechaInicio, fechaFin);
   
@@ -77,14 +92,32 @@ export function generarReporteAsignaciones(
     return a.horaSalida.localeCompare(b.horaSalida);
   });
 
+  // Obtener lista única de buses que operan (ordenados por placa)
+  const busesOperando = [...new Set(frecuencias.map(f => f.busPlaca).filter(Boolean))].sort();
+  const totalBuses = busesOperando.length;
+
   const asignaciones: AsignacionViaje[] = frecuenciasOrdenadas.map((frec, index) => {
     const fechasAsignadas: { [fecha: string]: string } = {};
     
     // Para cada fecha en el rango, verificar si la frecuencia opera ese día
-    for (const fecha of fechas) {
+    for (let diaIndex = 0; diaIndex < fechas.length; diaIndex++) {
+      const fecha = fechas[diaIndex];
       const diaSemana = obtenerDiaSemana(fecha);
+      
       if (operaEnDia(frec.diasOperacion, diaSemana)) {
-        fechasAsignadas[formatearFechaCorta(fecha)] = frec.busPlaca || '';
+        if (modoAsignacion === 'rotativo' && totalBuses > 0) {
+          // Modo rotativo: Los buses rotan por los circuitos cada día
+          // El bus que hace el circuito N hoy, mañana hace el circuito N+1
+          // index = número de circuito (0-based)
+          // diaIndex = día en el rango (0-based)
+          // Fórmula: busIndex = (index + diaIndex) % totalBuses
+          // Esto hace que cada día el bus "avance" al siguiente circuito
+          const busIndex = (index + diaIndex) % totalBuses;
+          fechasAsignadas[formatearFechaCorta(fecha)] = busesOperando[busIndex];
+        } else {
+          // Modo fijo: Cada frecuencia siempre usa el mismo bus
+          fechasAsignadas[formatearFechaCorta(fecha)] = frec.busPlaca || '';
+        }
       }
     }
 

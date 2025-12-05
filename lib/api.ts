@@ -852,6 +852,160 @@ export interface PersonalListResponse {
   total: number;
 }
 
+// ==================== REPORTES COOPERATIVA ====================
+
+export interface ResumenCooperativaResponse {
+  // Ventas
+  ventasTotales: number;
+  ventasCambio: number;
+  totalTransacciones: number;
+  ticketPromedio: number;
+  
+  // Viajes
+  totalViajes: number;
+  viajesCompletados: number;
+  viajesCancelados: number;
+  viajesPendientes: number;
+  
+  // Ocupación
+  ocupacionPromedio: number;
+  ocupacionMasAlta: number;
+  ocupacionMasBaja: number;
+  asientosTotalesVendidos: number;
+  
+  // Recursos
+  totalBuses: number;
+  busesActivos: number;
+  totalChoferes: number;
+  choferesActivos: number;
+  totalRutas: number;
+  rutasActivas: number;
+}
+
+export interface VentaDiariaDto {
+  fecha: string;
+  diaSemana: string;
+  monto: number;
+  transacciones: number;
+}
+
+export interface RutaVentasDto {
+  rutaId: number;
+  nombreRuta: string;
+  terminalOrigen: string;
+  terminalDestino: string;
+  ventas: number;
+  boletos: number;
+}
+
+export interface ReporteVentasResponse {
+  ventasTotales: number;
+  cambioVentas: number;
+  totalTransacciones: number;
+  ticketPromedio: number;
+  ventasDiarias: number;
+  ventasPorDia: VentaDiariaDto[];
+  topRutas: RutaVentasDto[];
+}
+
+export interface ViajeEstadoDto {
+  estado: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface ViajeDiarioDto {
+  fecha: string;
+  diaSemana: string;
+  total: number;
+  completados: number;
+  cancelados: number;
+}
+
+export interface ViajeRutaDto {
+  rutaId: number;
+  nombreRuta: string;
+  totalViajes: number;
+  viajesCompletados: number;
+  porcentajeOcupacion: number;
+}
+
+export interface ViajeBusDto {
+  busId: number;
+  placa: string;
+  totalViajes: number;
+  viajesCompletados: number;
+  horasTrabajadas: number;
+}
+
+export interface ReporteViajesResponse {
+  totalViajes: number;
+  viajesCompletados: number;
+  viajesCancelados: number;
+  viajesPendientes: number;
+  viajesEnRuta: number;
+  porcentajeCompletados: number;
+  porcentajeCancelados: number;
+  viajesPorEstado: ViajeEstadoDto[];
+  viajesPorDia: ViajeDiarioDto[];
+  viajesPorRuta: ViajeRutaDto[];
+  viajesPorBus: ViajeBusDto[];
+}
+
+export interface OcupacionDiariaDto {
+  fecha: string;
+  diaSemana: string;
+  porcentaje: number;
+  asientosVendidos: number;
+  asientosTotales: number;
+}
+
+export interface OcupacionRutaDto {
+  nombreRuta: string;
+  ocupacionPromedio: number;
+  viajes: number;
+}
+
+export interface OcupacionHoraDto {
+  hora: number;
+  ocupacionPromedio: number;
+  viajes: number;
+}
+
+export interface ReporteOcupacionResponse {
+  ocupacionPromedio: number;
+  ocupacionMasAlta: number;
+  ocupacionMasBaja: number;
+  asientosTotales: number;
+  asientosVendidos: number;
+  asientosDisponibles: number;
+  ocupacionPorDia: OcupacionDiariaDto[];
+  ocupacionPorRuta: OcupacionRutaDto[];
+  ocupacionPorHora: OcupacionHoraDto[];
+}
+
+export interface DetalleRutaDto {
+  rutaId: number;
+  terminalOrigen: string;
+  terminalDestino: string;
+  nombreRuta: string;
+  distanciaKm: number;
+  duracionMinutos: number;
+  precioBase: number;
+  frecuenciasActivas: number;
+  viajesRealizados: number;
+  ingresosTotales: number;
+  ocupacionPromedio: number;
+  activa: boolean;
+}
+
+export interface ReporteRutasResponse {
+  totalRutas: number;
+  rutasActivas: number;
+  frecuenciasActivas: number;
+  rutas: DetalleRutaDto[];
+}
+
 export const cooperativaApi = {
   // ========== Buses ==========
   obtenerBuses: async (cooperativaId: number, token: string): Promise<BusDto[]> => {
@@ -1017,6 +1171,88 @@ export const cooperativaApi = {
       fetchConfig(token)
     );
     return handleResponse<PersonalListResponse>(response);
+  },
+
+  // ========== REPORTES ==========
+  
+  /**
+   * Obtener resumen general de la cooperativa
+   */
+  getResumenReportes: async (
+    cooperativaId: number, 
+    fechaInicio: string, 
+    fechaFin: string, 
+    token: string
+  ): Promise<ResumenCooperativaResponse> => {
+    const response = await fetch(
+      `${API_URL}/cooperativa/${cooperativaId}/reportes/resumen?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      fetchConfig(token)
+    );
+    return handleResponse<ResumenCooperativaResponse>(response);
+  },
+
+  /**
+   * Obtener reporte de ventas
+   */
+  getReporteVentas: async (
+    cooperativaId: number, 
+    fechaInicio: string, 
+    fechaFin: string, 
+    token: string
+  ): Promise<ReporteVentasResponse> => {
+    const response = await fetch(
+      `${API_URL}/cooperativa/${cooperativaId}/reportes/ventas?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      fetchConfig(token)
+    );
+    return handleResponse<ReporteVentasResponse>(response);
+  },
+
+  /**
+   * Obtener reporte de viajes
+   */
+  getReporteViajes: async (
+    cooperativaId: number, 
+    fechaInicio: string, 
+    fechaFin: string, 
+    token: string
+  ): Promise<ReporteViajesResponse> => {
+    const response = await fetch(
+      `${API_URL}/cooperativa/${cooperativaId}/reportes/viajes?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      fetchConfig(token)
+    );
+    return handleResponse<ReporteViajesResponse>(response);
+  },
+
+  /**
+   * Obtener reporte de ocupación
+   */
+  getReporteOcupacion: async (
+    cooperativaId: number, 
+    fechaInicio: string, 
+    fechaFin: string, 
+    token: string
+  ): Promise<ReporteOcupacionResponse> => {
+    const response = await fetch(
+      `${API_URL}/cooperativa/${cooperativaId}/reportes/ocupacion?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      fetchConfig(token)
+    );
+    return handleResponse<ReporteOcupacionResponse>(response);
+  },
+
+  /**
+   * Obtener reporte de rutas
+   */
+  getReporteRutas: async (
+    cooperativaId: number, 
+    fechaInicio: string, 
+    fechaFin: string, 
+    token: string
+  ): Promise<ReporteRutasResponse> => {
+    const response = await fetch(
+      `${API_URL}/cooperativa/${cooperativaId}/reportes/rutas?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      fetchConfig(token)
+    );
+    return handleResponse<ReporteRutasResponse>(response);
   },
 };
 
@@ -2090,7 +2326,9 @@ export interface FrecuenciaViaje {
   tiempoMinimoEsperaMinutos?: number;
   requiereBusEnTerminal?: boolean;
   terminalOrigenId?: number;
+  terminalOrigenNombre?: string;
   terminalDestinoId?: number;
+  terminalDestinoNombre?: string;
   estado?: string;
 }
 

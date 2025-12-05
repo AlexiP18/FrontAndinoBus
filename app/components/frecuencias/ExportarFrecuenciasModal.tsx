@@ -10,6 +10,8 @@ import {
   Calendar,
   Bus,
   Loader2,
+  RotateCcw,
+  Lock,
 } from 'lucide-react';
 import {
   generarReporteAsignaciones,
@@ -19,6 +21,7 @@ import {
   reportePorBusToCSV,
   descargarCSV,
   descargarExcel,
+  ModoAsignacion,
 } from '@/lib/exportUtils';
 import { FrecuenciaViaje, BusDetailResponse } from '@/lib/api';
 
@@ -44,6 +47,7 @@ export default function ExportarFrecuenciasModal({
   const [loading, setLoading] = useState(false);
   const [tipoReporte, setTipoReporte] = useState<TipoReporte>('asignaciones');
   const [formato, setFormato] = useState<FormatoExport>('excel');
+  const [modoAsignacion, setModoAsignacion] = useState<ModoAsignacion>('rotativo');
   
   // Fechas por defecto: hoy y 2 semanas después
   const [fechaInicio, setFechaInicio] = useState(() => {
@@ -72,7 +76,8 @@ export default function ExportarFrecuenciasModal({
           buses,
           fechaInicioDate,
           fechaFinDate,
-          `HORAS DE TRABAJO - ${cooperativaNombre.toUpperCase()}`
+          `HORAS DE TRABAJO - ${cooperativaNombre.toUpperCase()}`,
+          modoAsignacion
         );
         
         if (formato === 'csv') {
@@ -99,11 +104,11 @@ export default function ExportarFrecuenciasModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div 
-          className="p-4 text-white flex justify-between items-center"
+          className="p-4 text-white flex justify-between items-center flex-shrink-0"
           style={{ backgroundColor: styles.primary }}
         >
           <div className="flex items-center gap-3">
@@ -121,8 +126,8 @@ export default function ExportarFrecuenciasModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Content - Scrollable */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Tipo de reporte */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -226,6 +231,79 @@ export default function ExportarFrecuenciasModal({
             </div>
           )}
 
+          {/* Modo de asignación (solo para asignaciones) */}
+          {tipoReporte === 'asignaciones' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Modo de asignación
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setModoAsignacion('rotativo')}
+                  className={`p-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                    modoAsignacion === 'rotativo'
+                      ? 'border-current'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  style={{
+                    borderColor: modoAsignacion === 'rotativo' ? styles.primary : undefined,
+                    backgroundColor: modoAsignacion === 'rotativo' ? `${styles.primary}15` : undefined,
+                  }}
+                >
+                  <RotateCcw 
+                    className="w-5 h-5" 
+                    style={{ color: modoAsignacion === 'rotativo' ? styles.primary : '#6b7280' }}
+                  />
+                  <div className="text-left">
+                    <span 
+                      className="font-medium text-sm block"
+                      style={{ color: modoAsignacion === 'rotativo' ? styles.primary : '#374151' }}
+                    >
+                      Rotativo
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Buses rotan por circuitos
+                    </span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setModoAsignacion('fijo')}
+                  className={`p-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                    modoAsignacion === 'fijo'
+                      ? 'border-current'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  style={{
+                    borderColor: modoAsignacion === 'fijo' ? styles.primary : undefined,
+                    backgroundColor: modoAsignacion === 'fijo' ? `${styles.primary}15` : undefined,
+                  }}
+                >
+                  <Lock 
+                    className="w-5 h-5" 
+                    style={{ color: modoAsignacion === 'fijo' ? styles.primary : '#6b7280' }}
+                  />
+                  <div className="text-left">
+                    <span 
+                      className="font-medium text-sm block"
+                      style={{ color: modoAsignacion === 'fijo' ? styles.primary : '#374151' }}
+                    >
+                      Fijo
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Bus fijo por frecuencia
+                    </span>
+                  </div>
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {modoAsignacion === 'rotativo' 
+                  ? '🔄 Los buses avanzan al siguiente circuito cada día (patrón escalonado)'
+                  : '🔒 Cada frecuencia mantiene el mismo bus asignado todos los días'}
+              </p>
+            </div>
+          )}
+
           {/* Formato de exportación */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -299,7 +377,7 @@ export default function ExportarFrecuenciasModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3 flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"

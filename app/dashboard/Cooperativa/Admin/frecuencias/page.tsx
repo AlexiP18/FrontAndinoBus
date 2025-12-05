@@ -574,7 +574,9 @@ export default function FrecuenciasCooperativaPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{frecuencia.rutaOrigen} → {frecuencia.rutaDestino}</p>
+                      <p className="text-sm text-gray-600">
+                        {frecuencia.terminalOrigenNombre || frecuencia.rutaOrigen} → {frecuencia.terminalDestinoNombre || frecuencia.rutaDestino}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <button
