@@ -8,10 +8,12 @@ import {
   frecuenciasAdminApi, 
   rutasAdminApi,
   getToken,
+  cooperativaConfigApi,
   type FrecuenciaViaje,
-  type RutaResponse
+  type RutaResponse,
+  type CooperativaConfigResponse
 } from '@/lib/api';
-import { Calendar, MapPin, Clock, DollarSign, Users, Bus, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, Clock, DollarSign, Users, Bus, ArrowLeft, Ticket, Search, AlertTriangle, Navigation } from 'lucide-react';
 
 export default function VenderBoletoPage() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function VenderBoletoPage() {
   const [rutas, setRutas] = useState<RutaResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<CooperativaConfigResponse | null>(null);
 
   // Filtros
   const [fechaViaje, setFechaViaje] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -57,6 +60,14 @@ export default function VenderBoletoPage() {
       // Cargar rutas disponibles
       const rutasData = await rutasAdminApi.getAll('activas', undefined, token);
       setRutas(rutasData);
+
+      // Cargar configuración de cooperativa
+      try {
+        const configuracion = await cooperativaConfigApi.getConfiguracion(user.cooperativaId, token);
+        setConfig(configuracion);
+      } catch (err) {
+        console.error('Error al cargar configuración:', err);
+      }
     } catch (err) {
       console.error('Error al cargar datos:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar los datos');
@@ -78,6 +89,9 @@ export default function VenderBoletoPage() {
 
     return true;
   });
+
+  // Colores institucionales
+  const primaryColor = config?.colorPrimario || '#7c3aed';
 
   const handleSeleccionarFrecuencia = (frecuencia: FrecuenciaViaje) => {
     // Guardar datos en sessionStorage y navegar a selección de asientos
@@ -103,7 +117,10 @@ export default function VenderBoletoPage() {
       <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['OFICINISTA']}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <div 
+              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto"
+              style={{ borderColor: primaryColor }}
+            ></div>
             <p className="mt-4 text-gray-600">Cargando frecuencias...</p>
           </div>
         </div>
@@ -119,7 +136,8 @@ export default function VenderBoletoPage() {
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista')}
-              className="text-purple-600 hover:text-purple-800 mb-4 flex items-center gap-2"
+              className="mb-4 flex items-center gap-2 hover:opacity-80"
+              style={{ color: primaryColor }}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver al Dashboard
@@ -127,7 +145,7 @@ export default function VenderBoletoPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  🎫 Venta de Boletos
+                  <Ticket className="w-7 h-7" style={{ color: primaryColor }} /> Venta de Boletos
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">
                   {user?.cooperativaNombre} - Selecciona una frecuencia para vender
@@ -138,7 +156,9 @@ export default function VenderBoletoPage() {
 
           {/* Filtros */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">🔍 Filtros de Búsqueda</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Search className="w-5 h-5 text-gray-600" /> Filtros de Búsqueda
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Fecha de viaje */}
               <div>
@@ -180,8 +200,11 @@ export default function VenderBoletoPage() {
 
               {/* Información */}
               <div className="flex items-end">
-                <div className="w-full bg-purple-50 border border-purple-200 rounded-lg p-3">
-                  <p className="text-sm text-purple-800">
+                <div 
+                  className="w-full rounded-lg p-3"
+                  style={{ backgroundColor: `${primaryColor}10`, border: `1px solid ${primaryColor}30` }}
+                >
+                  <p className="text-sm" style={{ color: primaryColor }}>
                     <strong>{frecuenciasFiltradas.length}</strong> frecuencias disponibles
                   </p>
                 </div>
@@ -191,8 +214,9 @@ export default function VenderBoletoPage() {
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-800">⚠️ {error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <p className="text-red-800">{error}</p>
             </div>
           )}
 
@@ -214,7 +238,10 @@ export default function VenderBoletoPage() {
                       {/* Información del viaje */}
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded font-medium text-sm">
+                          <div 
+                            className="px-3 py-1 rounded font-medium text-sm"
+                            style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
+                          >
                             {frecuencia.busPlaca}
                           </div>
                           <h3 className="text-xl font-semibold text-gray-900">
@@ -267,11 +294,11 @@ export default function VenderBoletoPage() {
                             {frecuencia.diasOperacion.split(',').map(dia => (
                               <span 
                                 key={dia} 
-                                className={`px-3 py-1 rounded text-xs font-medium ${
-                                  dia === diaSeleccionado 
-                                    ? 'bg-purple-600 text-white' 
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
+                                className="px-3 py-1 rounded text-xs font-medium"
+                                style={dia === diaSeleccionado 
+                                  ? { backgroundColor: primaryColor, color: 'white' }
+                                  : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+                                }
                               >
                                 {dia.substring(0, 3)}
                               </span>
@@ -283,8 +310,8 @@ export default function VenderBoletoPage() {
                         {frecuencia.paradas && frecuencia.paradas.length > 0 && (
                           <div className="mt-3 pt-3 border-t border-gray-200">
                             <details className="cursor-pointer">
-                              <summary className="text-sm font-medium text-gray-700">
-                                📍 {frecuencia.paradas.length} paradas intermedias
+                              <summary className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                                <Navigation className="w-4 h-4" /> {frecuencia.paradas.length} paradas intermedias
                               </summary>
                               <div className="mt-2 space-y-1">
                                 {frecuencia.paradas.map((parada) => (
@@ -305,14 +332,15 @@ export default function VenderBoletoPage() {
                             <DollarSign className="w-4 h-4" />
                             <span className="text-xs">Precio Base</span>
                           </div>
-                          <p className="text-3xl font-bold text-purple-600">
+                          <p className="text-3xl font-bold" style={{ color: primaryColor }}>
                             ${frecuencia.precioBase?.toFixed(2) || '0.00'}
                           </p>
                         </div>
                         
                         <button
                           onClick={() => handleSeleccionarFrecuencia(frecuencia)}
-                          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center gap-2"
+                          className="text-white px-6 py-3 rounded-lg hover:opacity-90 transition-colors font-semibold flex items-center gap-2"
+                          style={{ backgroundColor: primaryColor }}
                         >
                           <Bus className="w-5 h-5" />
                           Seleccionar

@@ -22,7 +22,8 @@ import {
   Bell,
   AlertCircle,
   CheckCircle,
-  Shield
+  Shield,
+  Bus
 } from 'lucide-react';
 
 type ActiveTab = 'info' | 'password' | 'notifications';
@@ -127,11 +128,11 @@ export default function MiCuentaPage() {
       // Actualizar contexto del usuario
       await refreshUser();
       
-      setSuccess('✅ Información actualizada exitosamente');
+      setSuccess('Información actualizada exitosamente');
 
       // Si las notificaciones están habilitadas, mostrar mensaje
       if (notificationSettings.emailOnProfileUpdate) {
-        setSuccess('✅ Información actualizada exitosamente. Se ha enviado una confirmación a tu email.');
+        setSuccess('Información actualizada exitosamente. Se ha enviado una confirmación a tu email.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar información');
@@ -169,7 +170,7 @@ export default function MiCuentaPage() {
         newPassword: passwordData.newPassword,
       }, token);
 
-      setSuccess('✅ Contraseña cambiada exitosamente');
+      setSuccess('Contraseña cambiada exitosamente');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -177,7 +178,7 @@ export default function MiCuentaPage() {
       });
 
       if (notificationSettings.emailOnPasswordChange) {
-        setSuccess('✅ Contraseña cambiada exitosamente. Se ha enviado una notificación a tu email.');
+        setSuccess('Contraseña cambiada exitosamente. Se ha enviado una notificación a tu email.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cambiar contraseña');
@@ -189,7 +190,7 @@ export default function MiCuentaPage() {
   const handleSaveNotifications = () => {
     if (user?.userId) {
       localStorage.setItem(`notifications_${user.userId}`, JSON.stringify(notificationSettings));
-      setSuccess('✅ Preferencias de notificación guardadas');
+      setSuccess('Preferencias de notificación guardadas');
       setTimeout(() => setSuccess(null), 3000);
     }
   };
@@ -356,8 +357,8 @@ export default function MiCuentaPage() {
               {/* Información de la cooperativa */}
               {user?.cooperativaNombre && (
                 <div className="p-4 rounded-lg" style={{ backgroundColor: `${primaryColor}10` }}>
-                  <p className="text-sm font-medium" style={{ color: primaryColor }}>
-                    🚌 Cooperativa: {user.cooperativaNombre}
+                  <p className="text-sm font-medium flex items-center gap-2" style={{ color: primaryColor }}>
+                    <Bus className="w-4 h-4" /> Cooperativa: {user.cooperativaNombre}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Rol: Oficinista

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/context/AuthContext';
-import { reservasApi, getToken } from '@/lib/api';
+import { reservasApi, getToken, cooperativaConfigApi, CooperativaConfigResponse } from '@/lib/api';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -47,11 +47,28 @@ export default function ReservasPage() {
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | 'PENDIENTE' | 'PAGADO' | 'CANCELADO'>('TODOS');
   const [reservaSeleccionada, setReservaSeleccionada] = useState<Reserva | null>(null);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [config, setConfig] = useState<CooperativaConfigResponse | null>(null);
+
+  const primaryColor = config?.colorPrimario || '#7c3aed';
 
   useEffect(() => {
     loadReservas();
+    // Cargar configuración de la cooperativa
+    const loadConfig = async () => {
+      if (!user?.cooperativaId) return;
+      try {
+        const token = getToken();
+        if (token) {
+          const configData = await cooperativaConfigApi.getConfiguracion(user.cooperativaId, token);
+          setConfig(configData);
+        }
+      } catch (error) {
+        console.error('Error cargando configuración:', error);
+      }
+    };
+    loadConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.cooperativaId]);
 
   const loadReservas = async () => {
     if (!user?.cooperativaId) return;
@@ -85,11 +102,11 @@ export default function ReservasPage() {
       if (!token) throw new Error('No hay token');
 
       await reservasApi.cancelar(reservaId, token);
-      alert('✅ Reserva cancelada exitosamente');
+      alert('Reserva cancelada exitosamente');
       loadReservas();
     } catch (err) {
       console.error('Error cancelando reserva:', err);
-      alert('❌ Error al cancelar la reserva');
+      alert('Error al cancelar la reserva');
     }
   };
 
@@ -139,7 +156,8 @@ export default function ReservasPage() {
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista')}
-              className="text-purple-600 hover:text-purple-800 mb-4 flex items-center gap-2"
+              className="mb-4 flex items-center gap-2 transition-colors"
+              style={{ color: primaryColor }}
             >
               <ArrowLeft className="w-5 h-5" />
               Volver al Dashboard
@@ -154,8 +172,8 @@ export default function ReservasPage() {
               </div>
               
               <div className="flex items-center gap-2 text-sm">
-                <Ticket className="w-5 h-5 text-purple-600" />
-                <span className="font-semibold">{reservasFiltradas.length} reservas</span>
+                <Ticket className="w-5 h-5" style={{ color: primaryColor }} />
+                <span className="font-semibold text-gray-900">{reservasFiltradas.length} reservas</span>
               </div>
             </div>
           </div>
@@ -167,9 +185,10 @@ export default function ReservasPage() {
                 onClick={() => setFiltroEstado('TODOS')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   filtroEstado === 'TODOS'
-                    ? 'bg-purple-600 text-white'
+                    ? 'text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
+                style={filtroEstado === 'TODOS' ? { backgroundColor: primaryColor } : {}}
               >
                 Todos ({reservas.length})
               </button>
@@ -209,7 +228,10 @@ export default function ReservasPage() {
           {/* Loading */}
           {loading && (
             <div className="bg-white rounded-lg shadow p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+              <div 
+                className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto"
+                style={{ borderColor: primaryColor }}
+              ></div>
               <p className="mt-4 text-gray-600">Cargando reservas...</p>
             </div>
           )}
@@ -288,7 +310,8 @@ export default function ReservasPage() {
                         )}
                         <button
                           onClick={() => handleVerDetalles(reserva)}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-2"
+                          className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                          style={{ backgroundColor: primaryColor }}
                         >
                           <Info className="w-4 h-4" />
                           Ver Detalles
@@ -306,17 +329,20 @@ export default function ReservasPage() {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                 {/* Header del Modal */}
-                <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6 flex justify-between items-center">
+                <div 
+                  className="sticky top-0 text-white p-6 flex justify-between items-center"
+                  style={{ backgroundColor: primaryColor }}
+                >
                   <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                       <Ticket className="w-6 h-6" />
                       Detalles de la Reserva
                     </h2>
-                    <p className="text-purple-100 text-sm mt-1">ID: #{reservaSeleccionada.id}</p>
+                    <p className="text-white text-opacity-80 text-sm mt-1">ID: #{reservaSeleccionada.id}</p>
                   </div>
                   <button
                     onClick={cerrarModal}
-                    className="p-2 hover:bg-purple-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-black hover:bg-opacity-20 rounded-lg transition-colors"
                   >
                     <X className="w-6 h-6" />
                   </button>

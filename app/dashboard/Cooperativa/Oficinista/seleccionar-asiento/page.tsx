@@ -8,12 +8,13 @@ import SeleccionAsientos from '@/app/components/SeleccionAsientos';
 import { 
   ventasPresencialesApi,
   boletosApi,
-  getToken
+  getToken,
+  cooperativaConfigApi,
+  CooperativaConfigResponse
 } from '@/lib/api';
 import { 
   ArrowLeft, 
   User, 
-  CreditCard, 
   DollarSign, 
   Calendar,
   Clock,
@@ -24,7 +25,6 @@ import {
   Armchair,
   AlertTriangle,
   CheckCircle,
-  Wallet,
   Download,
   QrCode,
   Printer
@@ -64,8 +64,9 @@ export default function SeleccionarAsientoPage() {
     telefono: '',
     email: ''
   });
-  const [metodoPago, setMetodoPago] = useState<'EFECTIVO' | 'TARJETA'>('EFECTIVO');
+  const [metodoPago] = useState<'EFECTIVO'>('EFECTIVO');
   const [loading, setLoading] = useState(false);
+  const [config, setConfig] = useState<CooperativaConfigResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1); // 1: Asientos, 2: Datos, 3: Confirmar, 4: Boleto
   const [boletoQR, setBoletoQR] = useState<string | null>(null);
@@ -82,6 +83,27 @@ export default function SeleccionarAsientoPage() {
       router.push('/dashboard/Cooperativa/Oficinista/vender-boleto');
     }
   }, [router]);
+
+  // Cargar configuración de cooperativa
+  useEffect(() => {
+    const loadConfig = async () => {
+      if (!user?.cooperativaId) return;
+      try {
+        const token = getToken();
+        if (token) {
+          const configuracion = await cooperativaConfigApi.getConfiguracion(user.cooperativaId, token);
+          setConfig(configuracion);
+        }
+      } catch (err) {
+        console.error('Error al cargar configuración:', err);
+      }
+    };
+    loadConfig();
+  }, [user?.cooperativaId]);
+
+  // Colores de la cooperativa
+  const primaryColor = config?.colorPrimario || '#7c3aed';
+  const secondaryColor = config?.colorSecundario || '#a855f7';
 
   const handleAsientosChange = (asientos: string[]) => {
     setAsientosSeleccionados(asientos);
@@ -171,7 +193,10 @@ export default function SeleccionarAsientoPage() {
       <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['OFICINISTA']}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <div 
+              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto"
+              style={{ borderColor: primaryColor }}
+            ></div>
             <p className="mt-4 text-gray-600">Cargando...</p>
           </div>
         </div>
@@ -194,7 +219,8 @@ export default function SeleccionarAsientoPage() {
                     router.push('/dashboard/Cooperativa/Oficinista/vender-boleto');
                   }
                 }}
-                className="text-purple-600 hover:text-purple-800 mb-4 flex items-center gap-2"
+                className="mb-4 flex items-center gap-2 hover:opacity-80"
+                style={{ color: primaryColor }}
               >
                 <ArrowLeft className="w-5 h-5" />
                 Volver
@@ -202,7 +228,8 @@ export default function SeleccionarAsientoPage() {
             ) : (
               <button
                 onClick={() => router.push('/dashboard/Cooperativa/Oficinista')}
-                className="text-purple-600 hover:text-purple-800 mb-4 flex items-center gap-2"
+                className="mb-4 flex items-center gap-2 hover:opacity-80"
+                style={{ color: primaryColor }}
               >
                 <ArrowLeft className="w-5 h-5" />
                 Volver al Dashboard
@@ -212,7 +239,7 @@ export default function SeleccionarAsientoPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <Ticket className="w-7 h-7" />
+                  <Ticket className="w-7 h-7" style={{ color: primaryColor }} />
                   Venta de Boleto - Paso {paso} de 4
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">{user?.cooperativaNombre}</p>
@@ -221,43 +248,55 @@ export default function SeleccionarAsientoPage() {
 
             {/* Indicador de pasos */}
             <div className="flex items-center gap-2 mt-4">
-              <div className={`flex-1 h-2 rounded ${paso >= 1 ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex-1 h-2 rounded ${paso >= 2 ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex-1 h-2 rounded ${paso >= 3 ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex-1 h-2 rounded ${paso >= 4 ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+              <div 
+                className="flex-1 h-2 rounded" 
+                style={{ backgroundColor: paso >= 1 ? primaryColor : '#e5e7eb' }}
+              ></div>
+              <div 
+                className="flex-1 h-2 rounded" 
+                style={{ backgroundColor: paso >= 2 ? primaryColor : '#e5e7eb' }}
+              ></div>
+              <div 
+                className="flex-1 h-2 rounded" 
+                style={{ backgroundColor: paso >= 3 ? primaryColor : '#e5e7eb' }}
+              ></div>
+              <div 
+                className="flex-1 h-2 rounded" 
+                style={{ backgroundColor: paso >= 4 ? '#22c55e' : '#e5e7eb' }}
+              ></div>
             </div>
           </div>
 
           {/* Información del viaje */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-purple-600" />
+              <ClipboardList className="w-5 h-5" style={{ color: primaryColor }} />
               Información del Viaje
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-purple-600" />
+                <MapPin className="w-5 h-5" style={{ color: primaryColor }} />
                 <div>
                   <p className="text-xs font-bold text-gray-700">Ruta</p>
                   <p className="font-medium text-gray-900">{datosVenta.rutaNombre}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-purple-600" />
+                <Calendar className="w-5 h-5" style={{ color: primaryColor }} />
                 <div>
                   <p className="text-xs font-bold text-gray-700">Fecha</p>
                   <p className="font-medium text-gray-900">{datosVenta.fecha}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-purple-600" />
+                <Clock className="w-5 h-5" style={{ color: primaryColor }} />
                 <div>
                   <p className="text-xs font-bold text-gray-700">Hora</p>
                   <p className="font-medium text-gray-900">{datosVenta.horaSalida}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Bus className="w-5 h-5 text-purple-600" />
+                <Bus className="w-5 h-5" style={{ color: primaryColor }} />
                 <div>
                   <p className="text-xs font-bold text-gray-700">Bus</p>
                   <p className="font-medium text-gray-900">{datosVenta.busPlaca}</p>
@@ -281,7 +320,7 @@ export default function SeleccionarAsientoPage() {
               {paso === 1 && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Armchair className="w-5 h-5 text-purple-600" />
+                    <Armchair className="w-5 h-5" style={{ color: primaryColor }} />
                     Selecciona los Asientos
                   </h2>
                   <SeleccionAsientos
@@ -294,7 +333,8 @@ export default function SeleccionarAsientoPage() {
                     <button
                       onClick={handleContinuarPaso2}
                       disabled={asientosSeleccionados.length === 0}
-                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
+                      className="text-white px-6 py-3 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold hover:opacity-90"
+                      style={{ backgroundColor: asientosSeleccionados.length === 0 ? undefined : primaryColor }}
                     >
                       Continuar →
                     </button>
@@ -383,33 +423,14 @@ export default function SeleccionarAsientoPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Método de Pago <span className="text-red-500">*</span>
+                        Método de Pago
                       </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setMetodoPago('EFECTIVO')}
-                          className={`flex items-center justify-center gap-2 px-4 py-3 border-2 rounded-lg transition-colors ${
-                            metodoPago === 'EFECTIVO'
-                              ? 'border-purple-600 bg-purple-50 text-purple-700'
-                              : 'border-gray-300 hover:border-purple-300'
-                          }`}
-                        >
-                          <DollarSign className="w-5 h-5" />
-                          <span className="font-medium">Efectivo</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setMetodoPago('TARJETA')}
-                          className={`flex items-center justify-center gap-2 px-4 py-3 border-2 rounded-lg transition-colors ${
-                            metodoPago === 'TARJETA'
-                              ? 'border-purple-600 bg-purple-50 text-purple-700'
-                              : 'border-gray-300 hover:border-purple-300'
-                          }`}
-                        >
-                          <CreditCard className="w-5 h-5" />
-                          <span className="font-medium">Tarjeta</span>
-                        </button>
+                      <div 
+                        className="flex items-center gap-3 px-4 py-3 border-2 rounded-lg"
+                        style={{ borderColor: primaryColor, backgroundColor: `${primaryColor}10` }}
+                      >
+                        <DollarSign className="w-5 h-5" style={{ color: primaryColor }} />
+                        <span className="font-medium" style={{ color: primaryColor }}>Efectivo (Pago en ventanilla)</span>
                       </div>
                     </div>
                   </div>
@@ -417,13 +438,15 @@ export default function SeleccionarAsientoPage() {
                   <div className="mt-6 flex justify-between">
                     <button
                       onClick={() => setPaso(1)}
-                      className="text-purple-600 hover:text-purple-800 font-medium"
+                      className="font-medium hover:opacity-80"
+                      style={{ color: primaryColor }}
                     >
                       ← Volver
                     </button>
                     <button
                       onClick={handleContinuarPaso3}
-                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-semibold"
+                      className="text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+                      style={{ backgroundColor: primaryColor }}
                     >
                       Continuar →
                     </button>
@@ -441,8 +464,11 @@ export default function SeleccionarAsientoPage() {
                   
                   <div className="space-y-6">
                     {/* Resumen del cliente */}
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <h3 className="font-bold text-purple-800 mb-3 text-base flex items-center gap-2">
+                    <div 
+                      className="rounded-lg p-4"
+                      style={{ backgroundColor: `${primaryColor}10`, border: `1px solid ${primaryColor}30` }}
+                    >
+                      <h3 className="font-bold mb-3 text-base flex items-center gap-2" style={{ color: primaryColor }}>
                         <User className="w-4 h-4" />
                         Cliente
                       </h3>
@@ -469,8 +495,11 @@ export default function SeleccionarAsientoPage() {
                     </div>
 
                     {/* Resumen del viaje */}
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <h3 className="font-bold text-purple-800 mb-3 text-base flex items-center gap-2">
+                    <div 
+                      className="rounded-lg p-4"
+                      style={{ backgroundColor: `${primaryColor}10`, border: `1px solid ${primaryColor}30` }}
+                    >
+                      <h3 className="font-bold mb-3 text-base flex items-center gap-2" style={{ color: primaryColor }}>
                         <Bus className="w-4 h-4" />
                         Detalles del Viaje
                       </h3>
@@ -497,7 +526,7 @@ export default function SeleccionarAsientoPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="font-bold text-gray-700">Método de pago:</span>
-                          <span className="font-medium text-gray-900">{metodoPago}</span>
+                          <span className="font-medium text-gray-900">Efectivo</span>
                         </div>
                       </div>
                     </div>
@@ -506,7 +535,8 @@ export default function SeleccionarAsientoPage() {
                   <div className="mt-6 flex justify-between">
                     <button
                       onClick={() => setPaso(2)}
-                      className="text-purple-600 hover:text-purple-800 font-medium"
+                      className="font-medium hover:opacity-80"
+                      style={{ color: primaryColor }}
                       disabled={loading}
                     >
                       ← Volver
@@ -544,8 +574,11 @@ export default function SeleccionarAsientoPage() {
                   </div>
 
                   {/* Código del boleto */}
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm font-bold text-purple-800 mb-1">Código del Boleto:</p>
+                  <div 
+                    className="rounded-lg p-4 mb-6"
+                    style={{ backgroundColor: `${primaryColor}10`, border: `1px solid ${primaryColor}30` }}
+                  >
+                    <p className="text-sm font-bold mb-1" style={{ color: primaryColor }}>Código del Boleto:</p>
                     <p className="text-2xl font-mono font-bold text-gray-900">{codigoBoleto}</p>
                   </div>
 
@@ -644,7 +677,7 @@ export default function SeleccionarAsientoPage() {
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow p-6 sticky top-8">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-purple-600" />
+                    <DollarSign className="w-5 h-5" style={{ color: primaryColor }} />
                     Resumen
                   </h2>
                   
@@ -661,7 +694,8 @@ export default function SeleccionarAsientoPage() {
                           {asientosSeleccionados.map(asiento => (
                             <span 
                               key={asiento} 
-                              className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium"
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
                             >
                               {asiento}
                             </span>
@@ -675,7 +709,7 @@ export default function SeleccionarAsientoPage() {
                         <span className="text-gray-600">Precio por asiento:</span>
                         <span className="font-medium text-gray-900">${datosVenta.precioBase.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-lg font-bold text-purple-600">
+                      <div className="flex justify-between text-lg font-bold" style={{ color: primaryColor }}>
                         <span>Total a pagar:</span>
                         <span>${calcularTotal().toFixed(2)}</span>
                       </div>
@@ -686,17 +720,8 @@ export default function SeleccionarAsientoPage() {
                     <div className="mt-4 pt-4 border-t">
                       <p className="text-xs text-gray-500 mb-2">Método de pago:</p>
                       <div className="flex items-center gap-2 text-sm">
-                        {metodoPago === 'EFECTIVO' ? (
-                          <>
-                            <DollarSign className="w-4 h-4 text-purple-600" />
-                            <span className="font-medium text-gray-900">Efectivo</span>
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard className="w-4 h-4 text-purple-600" />
-                            <span className="font-medium text-gray-900">Tarjeta</span>
-                          </>
-                        )}
+                        <DollarSign className="w-4 h-4" style={{ color: primaryColor }} />
+                        <span className="font-medium text-gray-900">Efectivo</span>
                       </div>
                     </div>
                   )}

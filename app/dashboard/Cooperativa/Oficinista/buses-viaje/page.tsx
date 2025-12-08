@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { viajesActivosApi, ViajeActivo, getToken, cooperativaConfigApi, CooperativaConfigResponse } from '@/lib/api';
 import { 
@@ -35,6 +35,7 @@ export default function BusesEnViajePage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Map<number, any>>(new Map());
+  const mapInitializedRef = useRef(false);
 
   // Cargar configuración de cooperativa y viajes activos
   useEffect(() => {
@@ -76,29 +77,236 @@ export default function BusesEnViajePage() {
 
   // Inicializar mapa cuando cargue
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || mapInstanceRef.current) return;
+    if (!mapLoaded || !L) return;
+    
+    // Esperar a que el ref esté disponible
+    const checkAndInitMap = () => {
+      const container = mapRef.current;
+      if (!container) {
+        // Si el contenedor no está listo, reintentar
+        setTimeout(checkAndInitMap, 100);
+        return;
+      }
+      
+      // Verificar si ya hay un mapa en este contenedor
+      if ((container as any)._leaflet_id) {
+        // Ya hay un mapa, no crear otro
+        return;
+      }
+      
+      try {
+        const map = L.map(container).setView([-1.8312, -78.1834], 7);
+        mapInstanceRef.current = map;
+        mapInitializedRef.current = true;
 
-    // Centro de Ecuador por defecto
-    const map = L.map(mapRef.current).setView([-1.8312, -78.1834], 7);
-    mapInstanceRef.current = map;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Invalidar tamaño después de un momento
+        setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        }, 200);
+      } catch (e) {
+        console.error('Error inicializando mapa:', e);
+      }
+    };
+    
+    checkAndInitMap();
 
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // Ignorar
+        }
         mapInstanceRef.current = null;
+        mapInitializedRef.current = false;
       }
     };
   }, [mapLoaded]);
 
-  // Actualizar marcadores cuando cambien los viajes
+  // Actualizar marcadores cuando cambien los viajes o la selección
   useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current) return;
-    updateMarkers();
-  }, [mapLoaded, viajesActivos, selectedViaje]);
+    if (!mapLoaded || !mapInstanceRef.current || !L) return;
+    
+    const map = mapInstanceRef.current;
+    const primaryColor = config?.colorPrimario || '#7c3aed';
+    const bounds: [number, number][] = [];
+
+    // Limpiar TODOS los marcadores anteriores de nuestro ref
+    markersRef.current.forEach(marker => {
+      try {
+        if (marker && typeof marker.remove === 'function') {
+          marker.remove();
+        }
+      } catch (e) {
+        // Ignorar errores de limpieza
+      }
+    });
+    markersRef.current.clear();
+    
+    // Limpiar todas las capas excepto el tile layer base
+    map.eachLayer((layer: any) => {
+      // No remover el tile layer (OpenStreetMap)
+      if (layer._url && layer._url.includes('openstreetmap')) {
+        return;
+      }
+      // Remover marcadores y polylines
+      if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+        try {
+          layer.remove();
+        } catch (e) {
+          // Ignorar
+        }
+      }
+    });
+
+    viajesActivos.forEach(viaje => {
+      const isSelected = selectedViaje?.id === viaje.id;
+      
+      // Determinar posición del bus: GPS actual o terminal de origen si no hay GPS
+      const busLat = viaje.latitudActual || viaje.terminalOrigenLatitud;
+      const busLon = viaje.longitudActual || viaje.terminalOrigenLongitud;
+      const tieneGPS = !!(viaje.latitudActual && viaje.longitudActual);
+      
+      // Marcador del bus (posición actual o terminal origen)
+      if (busLat && busLon) {
+        const busIcon = L.divIcon({
+          className: 'bus-marker',
+          html: `
+            <div style="
+              background-color: ${isSelected ? '#f59e0b' : primaryColor};
+              width: ${isSelected ? '48px' : '40px'};
+              height: ${isSelected ? '48px' : '40px'};
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: ${isSelected ? '24px' : '20px'};
+              border: 3px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+              ${!tieneGPS ? 'opacity: 0.7;' : ''}
+              ${isSelected ? 'animation: pulse 2s infinite;' : ''}
+            "><svg xmlns="http://www.w3.org/2000/svg" width="${isSelected ? '24' : '20'}" height="${isSelected ? '24' : '20'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg></div>
+            <style>
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.15); }
+              }
+            </style>
+          `,
+          iconSize: [isSelected ? 48 : 40, isSelected ? 48 : 40],
+          iconAnchor: [isSelected ? 24 : 20, isSelected ? 24 : 20],
+        });
+
+        const marker = L.marker([busLat, busLon], { icon: busIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="min-width: 200px;">
+              <h3 style="font-weight: bold; margin-bottom: 8px; color: ${primaryColor};">
+                Bus ${viaje.busPlaca}
+              </h3>
+              <p><strong>Ruta:</strong> ${viaje.rutaOrigen} → ${viaje.rutaDestino}</p>
+              <p><strong>Chofer:</strong> ${viaje.choferNombreCompleto || `${viaje.choferNombre} ${viaje.choferApellido}`}</p>
+              <p><strong>Capacidad:</strong> ${viaje.capacidadTotal} asientos</p>
+              ${tieneGPS ? `<p><strong>Velocidad:</strong> ${viaje.velocidadKmh?.toFixed(0) || 0} km/h</p>` : '<p style="color: #f59e0b;"><strong>GPS:</strong> Sin señal - En terminal</p>'}
+              ${viaje.ultimaActualizacion ? `<p style="font-size: 11px; color: #666;">Última actualización: ${new Date(viaje.ultimaActualizacion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>` : ''}
+            </div>
+          `)
+          .on('click', () => setSelectedViaje(prev => prev?.id === viaje.id ? null : viaje));
+
+        markersRef.current.set(viaje.id, marker);
+        bounds.push([busLat, busLon]);
+      }
+
+      // Solo mostrar terminales y ruta del bus seleccionado
+      if (isSelected) {
+        // Marcadores de terminales origen y destino
+        if (viaje.terminalOrigenLatitud && viaje.terminalOrigenLongitud) {
+          const origenIcon = L.divIcon({
+            className: 'terminal-marker',
+            html: `<div style="background-color: #22c55e; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4);">A</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+          const origenMarker = L.marker([viaje.terminalOrigenLatitud, viaje.terminalOrigenLongitud], { 
+            icon: origenIcon,
+          })
+            .addTo(map)
+            .bindPopup(`<b style="color: #22c55e;">Origen:</b> ${viaje.terminalOrigenNombre || viaje.rutaOrigen}`);
+          markersRef.current.set(-viaje.id * 1000, origenMarker);
+        }
+
+        if (viaje.terminalDestinoLatitud && viaje.terminalDestinoLongitud) {
+          const destinoIcon = L.divIcon({
+            className: 'terminal-marker',
+            html: `<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4);">B</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+          const destinoMarker = L.marker([viaje.terminalDestinoLatitud, viaje.terminalDestinoLongitud], { 
+            icon: destinoIcon,
+          })
+            .addTo(map)
+            .bindPopup(`<b style="color: #ef4444;">Destino:</b> ${viaje.terminalDestinoNombre || viaje.rutaDestino}`);
+          markersRef.current.set(-viaje.id * 1000 - 1, destinoMarker);
+        }
+
+        // Dibujar ruta si hay terminales
+        if (viaje.terminalOrigenLatitud && viaje.terminalOrigenLongitud && 
+            viaje.terminalDestinoLatitud && viaje.terminalDestinoLongitud) {
+          
+          const routePoints: [number, number][] = [
+            [viaje.terminalOrigenLatitud, viaje.terminalOrigenLongitud]
+          ];
+          
+          if (viaje.latitudActual && viaje.longitudActual) {
+            routePoints.push([viaje.latitudActual, viaje.longitudActual]);
+          }
+          
+          routePoints.push([viaje.terminalDestinoLatitud, viaje.terminalDestinoLongitud]);
+          
+          const routeLine = L.polyline(routePoints, {
+            color: '#f59e0b',
+            weight: 4,
+            opacity: 0.8,
+            dashArray: '12, 8',
+          }).addTo(map);
+          
+          markersRef.current.set(-viaje.id * 2000, routeLine);
+        }
+      }
+    });
+
+    // Ajustar vista del mapa
+    if (selectedViaje) {
+      const selectedBounds: [number, number][] = [];
+      
+      const busLat = selectedViaje.latitudActual || selectedViaje.terminalOrigenLatitud;
+      const busLon = selectedViaje.longitudActual || selectedViaje.terminalOrigenLongitud;
+      if (busLat && busLon) {
+        selectedBounds.push([busLat, busLon]);
+      }
+      
+      if (selectedViaje.terminalOrigenLatitud && selectedViaje.terminalOrigenLongitud) {
+        selectedBounds.push([selectedViaje.terminalOrigenLatitud, selectedViaje.terminalOrigenLongitud]);
+      }
+      if (selectedViaje.terminalDestinoLatitud && selectedViaje.terminalDestinoLongitud) {
+        selectedBounds.push([selectedViaje.terminalDestinoLatitud, selectedViaje.terminalDestinoLongitud]);
+      }
+      
+      if (selectedBounds.length > 0) {
+        map.fitBounds(selectedBounds, { padding: [60, 60], maxZoom: 13 });
+      }
+    } else if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    }
+  }, [mapLoaded, viajesActivos, selectedViaje, config?.colorPrimario]);
 
   const loadData = async () => {
     try {
@@ -120,160 +328,6 @@ export default function BusesEnViajePage() {
       setLoading(false);
     }
   };
-
-  const updateMarkers = useCallback(() => {
-    if (!mapInstanceRef.current || !L) return;
-
-    const map = mapInstanceRef.current;
-    const primaryColor = config?.colorPrimario || '#7c3aed';
-    const bounds: [number, number][] = [];
-
-    // Limpiar marcadores anteriores
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current.clear();
-    
-    // Limpiar capas previas (terminales y rutas)
-    map.eachLayer((layer: any) => {
-      if (layer.options?.className === 'terminal-marker' || layer.options?.className === 'route-line') {
-        layer.remove();
-      }
-    });
-
-    viajesActivos.forEach(viaje => {
-      const isSelected = selectedViaje?.id === viaje.id;
-      
-      // Marcador del bus (posición actual)
-      if (viaje.latitudActual && viaje.longitudActual) {
-        const busIcon = L.divIcon({
-          className: 'bus-marker',
-          html: `
-            <div style="
-              background-color: ${isSelected ? '#f59e0b' : primaryColor};
-              width: ${isSelected ? '48px' : '40px'};
-              height: ${isSelected ? '48px' : '40px'};
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              font-size: ${isSelected ? '24px' : '20px'};
-              border: 3px solid white;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-              ${isSelected ? 'animation: pulse 2s infinite;' : ''}
-            ">🚌</div>
-            <style>
-              @keyframes pulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.15); }
-              }
-            </style>
-          `,
-          iconSize: [isSelected ? 48 : 40, isSelected ? 48 : 40],
-          iconAnchor: [isSelected ? 24 : 20, isSelected ? 24 : 20],
-        });
-
-        const marker = L.marker([viaje.latitudActual, viaje.longitudActual], { icon: busIcon })
-          .addTo(map)
-          .bindPopup(`
-            <div style="min-width: 200px;">
-              <h3 style="font-weight: bold; margin-bottom: 8px; color: ${primaryColor};">
-                🚌 ${viaje.busPlaca}
-              </h3>
-              <p><strong>Ruta:</strong> ${viaje.rutaOrigen} → ${viaje.rutaDestino}</p>
-              <p><strong>Chofer:</strong> ${viaje.choferNombreCompleto || `${viaje.choferNombre} ${viaje.choferApellido}`}</p>
-              <p><strong>Pasajeros:</strong> ${viaje.numeroPasajeros}/${viaje.capacidadTotal}</p>
-              <p><strong>Velocidad:</strong> ${viaje.velocidadKmh?.toFixed(0) || 0} km/h</p>
-              ${viaje.ultimaActualizacion ? `<p style="font-size: 11px; color: #666;">Última actualización: ${formatTime(viaje.ultimaActualizacion)}</p>` : ''}
-            </div>
-          `)
-          .on('click', () => setSelectedViaje(isSelected ? null : viaje));
-
-        markersRef.current.set(viaje.id, marker);
-        bounds.push([viaje.latitudActual, viaje.longitudActual]);
-      }
-
-      // Solo mostrar terminales y ruta del bus seleccionado
-      if (isSelected) {
-        // Marcadores de terminales origen y destino
-        if (viaje.terminalOrigenLatitud && viaje.terminalOrigenLongitud) {
-          const origenIcon = L.divIcon({
-            className: 'terminal-marker',
-            html: `<div style="background-color: #22c55e; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4);">A</div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-          });
-          const origenMarker = L.marker([viaje.terminalOrigenLatitud, viaje.terminalOrigenLongitud], { 
-            icon: origenIcon,
-            className: 'terminal-marker'
-          })
-            .addTo(map)
-            .bindPopup(`<b>🟢 Origen:</b> ${viaje.terminalOrigenNombre || viaje.rutaOrigen}`);
-          markersRef.current.set(-viaje.id * 1000, origenMarker); // ID negativo para terminales
-        }
-
-        if (viaje.terminalDestinoLatitud && viaje.terminalDestinoLongitud) {
-          const destinoIcon = L.divIcon({
-            className: 'terminal-marker',
-            html: `<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4);">B</div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-          });
-          const destinoMarker = L.marker([viaje.terminalDestinoLatitud, viaje.terminalDestinoLongitud], { 
-            icon: destinoIcon,
-            className: 'terminal-marker'
-          })
-            .addTo(map)
-            .bindPopup(`<b>🔴 Destino:</b> ${viaje.terminalDestinoNombre || viaje.rutaDestino}`);
-          markersRef.current.set(-viaje.id * 1000 - 1, destinoMarker);
-        }
-
-        // Dibujar ruta si hay terminales
-        if (viaje.terminalOrigenLatitud && viaje.terminalOrigenLongitud && 
-            viaje.terminalDestinoLatitud && viaje.terminalDestinoLongitud) {
-          
-          // Construir puntos de la ruta: Origen -> Bus -> Destino
-          const routePoints: [number, number][] = [
-            [viaje.terminalOrigenLatitud, viaje.terminalOrigenLongitud]
-          ];
-          
-          // Añadir posición actual del bus si está disponible
-          if (viaje.latitudActual && viaje.longitudActual) {
-            routePoints.push([viaje.latitudActual, viaje.longitudActual]);
-          }
-          
-          routePoints.push([viaje.terminalDestinoLatitud, viaje.terminalDestinoLongitud]);
-          
-          const routeLine = L.polyline(routePoints, {
-            color: '#f59e0b',
-            weight: 4,
-            opacity: 0.8,
-            dashArray: '12, 8',
-            className: 'route-line'
-          }).addTo(map);
-          
-          markersRef.current.set(-viaje.id * 2000, routeLine);
-        }
-      }
-    });
-
-    // Ajustar vista del mapa
-    if (selectedViaje && selectedViaje.latitudActual && selectedViaje.longitudActual) {
-      // Si hay un viaje seleccionado, centrar en el bus con sus terminales
-      const selectedBounds: [number, number][] = [[selectedViaje.latitudActual, selectedViaje.longitudActual]];
-      
-      if (selectedViaje.terminalOrigenLatitud && selectedViaje.terminalOrigenLongitud) {
-        selectedBounds.push([selectedViaje.terminalOrigenLatitud, selectedViaje.terminalOrigenLongitud]);
-      }
-      if (selectedViaje.terminalDestinoLatitud && selectedViaje.terminalDestinoLongitud) {
-        selectedBounds.push([selectedViaje.terminalDestinoLatitud, selectedViaje.terminalDestinoLongitud]);
-      }
-      
-      map.fitBounds(selectedBounds, { padding: [60, 60], maxZoom: 13 });
-    } else if (bounds.length > 0) {
-      // Si no hay selección, mostrar todos los buses
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-    }
-  }, [viajesActivos, selectedViaje, config?.colorPrimario]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -373,6 +427,7 @@ export default function BusesEnViajePage() {
             </div>
             <div 
               ref={mapRef} 
+              id="buses-viaje-map"
               className={`w-full ${isMapFullscreen ? 'h-[70vh]' : 'h-96'}`}
               style={{ minHeight: isMapFullscreen ? '70vh' : '400px' }}
             />
@@ -425,10 +480,10 @@ export default function BusesEnViajePage() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <span 
-                              className="text-lg font-bold"
+                              className="text-lg font-bold flex items-center gap-1"
                               style={{ color: primaryColor }}
                             >
-                              🚌 {viaje.busPlaca}
+                              <Bus className="w-5 h-5" /> {viaje.busPlaca}
                             </span>
                             {viaje.latitudActual && (
                               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -447,9 +502,13 @@ export default function BusesEnViajePage() {
                             <Clock className="w-3 h-3" />
                             {formatTime(viaje.fechaSalida + 'T' + viaje.horaSalida)}
                           </span>
-                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${getOcupacionColor(ocupacion)}`}>
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                            viaje.numeroPasajeros === 0 
+                              ? 'text-green-600 bg-green-100' 
+                              : getOcupacionColor(ocupacion)
+                          }`}>
                             <Users className="w-3 h-3" />
-                            {viaje.numeroPasajeros}/{viaje.capacidadTotal}
+                            {viaje.capacidadTotal - viaje.numeroPasajeros} disponibles
                           </span>
                         </div>
 
@@ -506,9 +565,9 @@ export default function BusesEnViajePage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Pasajeros</p>
+              <p className="text-sm text-gray-500 mb-1">Asientos</p>
               <p className="font-semibold text-gray-800">
-                {selectedViaje.numeroPasajeros} / {selectedViaje.capacidadTotal}
+                {selectedViaje.capacidadTotal - selectedViaje.numeroPasajeros} disponibles de {selectedViaje.capacidadTotal}
               </p>
             </div>
             <div>

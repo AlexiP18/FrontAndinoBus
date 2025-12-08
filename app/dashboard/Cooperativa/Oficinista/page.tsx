@@ -10,7 +10,6 @@ import {
   DollarSign,
   Bus,
   Clock,
-  TrendingUp,
   AlertCircle,
   CheckCircle,
   Bell,
@@ -202,8 +201,11 @@ export default function OficinistaDashboardPage() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                <Ticket className="w-6 h-6 text-blue-600" />
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors"
+                style={{ backgroundColor: primaryColor + '20' }}
+              >
+                <Ticket className="w-6 h-6" style={{ color: primaryColor }} />
               </div>
               <h3 className="font-semibold text-gray-800 mb-1">Vender Boleto</h3>
               <p className="text-sm text-gray-600">Venta presencial con selección de asientos</p>
@@ -215,8 +217,11 @@ export default function OficinistaDashboardPage() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
-                <Calendar className="w-6 h-6 text-orange-600" />
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors"
+                style={{ backgroundColor: primaryColor + '20' }}
+              >
+                <Calendar className="w-6 h-6" style={{ color: primaryColor }} />
               </div>
               <h3 className="font-semibold text-gray-800 mb-1">Gestionar Reservas</h3>
               <p className="text-sm text-gray-600">Confirmar, modificar o cancelar reservas</p>
@@ -228,8 +233,11 @@ export default function OficinistaDashboardPage() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
-                <Bus className="w-6 h-6 text-green-600" />
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors"
+                style={{ backgroundColor: primaryColor + '20' }}
+              >
+                <Bus className="w-6 h-6" style={{ color: primaryColor }} />
               </div>
               <h3 className="font-semibold text-gray-800 mb-1">Buses en Viaje</h3>
               <p className="text-sm text-gray-600">Monitoreo en tiempo real</p>
@@ -251,18 +259,7 @@ export default function OficinistaDashboardPage() {
               <p className="text-sm text-gray-600">Historial con mapas y pasajeros</p>
             </button>
 
-            <button
-              onClick={() => router.push('/dashboard/Cooperativa/Oficinista/mis-ventas')}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
-            >
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-1">Mis Ventas</h3>
-              <p className="text-sm text-gray-600">Historial y estadísticas</p>
-            </button>
+
           </div>
         </div>
 

@@ -7,7 +7,6 @@ import {
   Ticket, 
   Calendar, 
   Bus,
-  BarChart2,
   LogOut, 
   Menu,
   X,
@@ -108,12 +107,6 @@ export default function CooperativaOficinistaLayout({
       active: pathname?.startsWith('/dashboard/Cooperativa/Oficinista/viajes-pasados'),
     },
     {
-      icon: BarChart2,
-      label: 'Mis Ventas',
-      path: '/dashboard/Cooperativa/Oficinista/mis-ventas',
-      active: pathname?.startsWith('/dashboard/Cooperativa/Oficinista/mis-ventas'),
-    },
-    {
       icon: User,
       label: 'Mi Cuenta',
       path: '/dashboard/Cooperativa/Oficinista/mi-cuenta',
@@ -203,8 +196,8 @@ export default function CooperativaOficinistaLayout({
                   </p>
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                   {user?.cooperativaNombre && (
-                    <p className="text-xs font-medium truncate mt-0.5" style={{ color: primaryColor }}>
-                      🚌 {user.cooperativaNombre}
+                    <p className="text-xs font-medium truncate mt-0.5 flex items-center gap-1" style={{ color: primaryColor }}>
+                      <Bus className="w-3 h-3" /> {user.cooperativaNombre}
                     </p>
                   )}
                   {user?.cedula && (
@@ -231,10 +224,10 @@ export default function CooperativaOficinistaLayout({
                       : 'gap-3 px-4 py-3'
                   } ${
                     item.active
-                      ? 'text-white shadow-md'
+                      ? 'shadow-md'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={item.active ? { backgroundColor: primaryColor } : {}}
+                  style={item.active ? { backgroundColor: primaryColor, color: '#ffffff' } : {}}
                   onMouseEnter={(e) => {
                     if (!item.active) {
                       e.currentTarget.style.color = primaryColor;
@@ -322,8 +315,8 @@ export default function CooperativaOficinistaLayout({
                     </p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     {user?.cooperativaNombre && (
-                      <p className="text-xs font-medium truncate mt-0.5" style={{ color: primaryColor }}>
-                        🚌 {user.cooperativaNombre}
+                      <p className="text-xs font-medium truncate mt-0.5 flex items-center gap-1" style={{ color: primaryColor }}>
+                        <Bus className="w-3 h-3" /> {user.cooperativaNombre}
                       </p>
                     )}
                     {user?.cedula && (
@@ -348,10 +341,10 @@ export default function CooperativaOficinistaLayout({
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                         item.active
-                          ? 'text-white shadow-md'
+                          ? 'shadow-md'
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
-                      style={item.active ? { backgroundColor: primaryColor } : {}}
+                      style={item.active ? { backgroundColor: primaryColor, color: '#ffffff' } : {}}
                     >
                       <Icon className="w-5 h-5 shrink-0" />
                       <span className="font-medium text-sm">{item.label}</span>
