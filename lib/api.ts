@@ -79,6 +79,10 @@ export interface AuthResponse {
   cooperativaNombre?: string;
   cedula?: string;
   telefono?: string;
+  
+  // Campos para confirmación de email
+  message?: string;
+  requiresConfirmation?: boolean;
 }
 
 export interface MeResponse {
@@ -228,6 +232,8 @@ export interface RutaItem {
   fecha?: string;
   precio?: number;
   precioBase?: number;
+  busPlaca?: string;
+  busMarca?: string;
 }
 
 export interface RutasResponse {
@@ -1274,6 +1280,7 @@ export interface CooperativaInfo {
   id: number;
   nombre: string;
   ruc: string;
+  logoUrl?: string;
   cantidadBuses: number;
   cantidadPersonal: number;
   activo: boolean;
@@ -1729,6 +1736,10 @@ export interface PersonalDetailResponse {
   numeroLicencia?: string;
   tipoLicencia?: string;
   fechaVencimientoLicencia?: string;
+  // Bus asignado (solo para CHOFER)
+  busAsignadoId?: number;
+  busAsignadoPlaca?: string;
+  busAsignadoNumeroInterno?: string;
 }
 
 export const personalApi = {
@@ -1918,8 +1929,17 @@ export interface PasajeroViaje {
   verificado: boolean;
 }
 
+export interface CoordenadaDTO {
+  latitud?: number;
+  longitud?: number;
+  nombreTerminal?: string;
+  canton?: string;
+  provincia?: string;
+}
+
 export interface ViajeChofer {
-  id: number;
+  id: number | null;
+  frecuenciaId?: number; // ID de la frecuencia (cuando no hay viaje creado aún)
   origen: string;
   destino: string;
   fecha: string;
@@ -1928,12 +1948,20 @@ export interface ViajeChofer {
   horaLlegadaEstimada?: string;
   horaLlegadaReal?: string;
   busPlaca: string;
-  busMarca: string;
-  capacidadTotal: number;
+  busMarca?: string;
+  capacidadTotal?: number;
+  capacidadPiso1?: number; // Capacidad del primer piso
+  capacidadPiso2?: number; // Capacidad del segundo piso (0 si es bus de un piso)
   estado: string;
   pasajeros: PasajeroViaje[];
-  totalPasajeros: number;
-  pasajerosVerificados: number;
+  totalPasajeros?: number;
+  pasajerosVerificados?: number;
+  // Información de coordenadas para el mapa
+  coordenadaOrigen?: CoordenadaDTO;
+  coordenadaDestino?: CoordenadaDTO;
+  // Información de la cooperativa
+  cooperativaId?: number;
+  cooperativaNombre?: string;
 }
 
 export interface ViajeOperacionResponse {
@@ -1978,13 +2006,16 @@ export interface CalificacionesChoferResponse {
 
 export interface RutaChofer {
   id: number;
-  origen: string;
-  destino: string;
+  origen: string; // Cantón de origen
+  destino: string; // Cantón de destino
+  terminalOrigenNombre?: string; // Nombre de la terminal de origen
+  terminalDestinoNombre?: string; // Nombre de la terminal de destino
   horaSalida: string;
   duracionEstimadaMin?: number;
   diasOperacion?: string;
   activa: boolean;
   totalViajesRealizados: number;
+  busPlaca?: string; // Placa del bus asignado
 }
 
 export const viajeChoferApi = {
@@ -2327,8 +2358,10 @@ export interface FrecuenciaViaje {
   requiereBusEnTerminal?: boolean;
   terminalOrigenId?: number;
   terminalOrigenNombre?: string;
+  terminalOrigenCanton?: string;
   terminalDestinoId?: number;
   terminalDestinoNombre?: string;
+  terminalDestinoCanton?: string;
   estado?: string;
 }
 
@@ -3173,6 +3206,13 @@ export interface ViajeActivo {
   horaFinReal?: string;
   porcentajeOcupacion?: number;
   choferNombreCompleto?: string;
+  // Coordenadas de terminales para mostrar la ruta en el mapa
+  terminalOrigenLatitud?: number;
+  terminalOrigenLongitud?: number;
+  terminalDestinoLatitud?: number;
+  terminalDestinoLongitud?: number;
+  terminalOrigenNombre?: string;
+  terminalDestinoNombre?: string;
 }
 
 export const viajesActivosApi = {
@@ -4316,5 +4356,88 @@ export const capacidadOperativaApi = {
     const url = `${API_URL}/cooperativa/${cooperativaId}/capacidad/periodo${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, fetchConfig(token));
     return handleResponse<CapacidadPeriodoResponse>(response);
+  },
+};
+
+// ==================== NOTIFICACIONES DE VIAJE ====================
+
+export interface NotificacionViaje {
+  id: number;
+  viajeId: number;
+  tipo: 'VIAJE_INICIADO' | 'VIAJE_FINALIZADO' | 'VIAJE_CANCELADO' | 'ALERTA_RETRASO';
+  titulo: string;
+  mensaje: string;
+  detalleViaje?: string;
+  leida: boolean;
+  fechaCreacion: string;
+  fechaLectura?: string;
+}
+
+export interface NotificacionCountResponse {
+  noLeidas: number;
+}
+
+export interface MarcadoNotificacionResponse {
+  notificacionesMarcadas: number;
+  mensaje: string;
+}
+
+export const notificacionViajeApi = {
+  /**
+   * Obtener todas las notificaciones de una cooperativa
+   */
+  getNotificaciones: async (
+    cooperativaId: number,
+    soloNoLeidas: boolean = false,
+    token?: string
+  ): Promise<NotificacionViaje[]> => {
+    const url = `${API_URL}/cooperativa/${cooperativaId}/notificaciones?soloNoLeidas=${soloNoLeidas}`;
+    const response = await fetch(url, fetchConfig(token));
+    return handleResponse<NotificacionViaje[]>(response);
+  },
+
+  /**
+   * Obtener conteo de notificaciones no leídas
+   */
+  getCountNoLeidas: async (
+    cooperativaId: number,
+    token?: string
+  ): Promise<NotificacionCountResponse> => {
+    const url = `${API_URL}/cooperativa/${cooperativaId}/notificaciones/count`;
+    const response = await fetch(url, fetchConfig(token));
+    return handleResponse<NotificacionCountResponse>(response);
+  },
+
+  /**
+   * Marcar una notificación como leída
+   */
+  marcarComoLeida: async (
+    cooperativaId: number,
+    notificacionId: number,
+    token?: string
+  ): Promise<void> => {
+    const url = `${API_URL}/cooperativa/${cooperativaId}/notificaciones/${notificacionId}/leer`;
+    const response = await fetch(url, {
+      ...fetchConfig(token),
+      method: 'PUT',
+    });
+    if (!response.ok) {
+      throw new Error('Error al marcar notificación como leída');
+    }
+  },
+
+  /**
+   * Marcar todas las notificaciones como leídas
+   */
+  marcarTodasComoLeidas: async (
+    cooperativaId: number,
+    token?: string
+  ): Promise<MarcadoNotificacionResponse> => {
+    const url = `${API_URL}/cooperativa/${cooperativaId}/notificaciones/leer-todas`;
+    const response = await fetch(url, {
+      ...fetchConfig(token),
+      method: 'PUT',
+    });
+    return handleResponse<MarcadoNotificacionResponse>(response);
   },
 };

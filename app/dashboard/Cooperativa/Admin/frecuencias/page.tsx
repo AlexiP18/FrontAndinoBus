@@ -43,6 +43,33 @@ import {
 
 const DIAS_SEMANA = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
+// Función helper para extraer el cantón de un string
+// El formato puede ser "Provincia|Canton|ID" o simplemente un nombre de terminal/lugar
+const extraerCanton = (valor: string | undefined | null): string => {
+  if (!valor) return '';
+  // Si contiene el separador |, extraer el cantón (segundo elemento)
+  if (valor.includes('|')) {
+    const partes = valor.split('|');
+    return partes[1] || partes[0] || valor;
+  }
+  // Si no tiene separador, devolver el valor tal cual
+  return valor;
+};
+
+// Función para obtener el cantón de origen de una frecuencia
+// Prioriza el cantón del terminal, luego extrae del rutaOrigen
+const getCantonOrigen = (f: FrecuenciaViaje): string => {
+  if (f.terminalOrigenCanton) return f.terminalOrigenCanton;
+  return extraerCanton(f.rutaOrigen);
+};
+
+// Función para obtener el cantón de destino de una frecuencia
+// Prioriza el cantón del terminal, luego extrae del rutaDestino
+const getCantonDestino = (f: FrecuenciaViaje): string => {
+  if (f.terminalDestinoCanton) return f.terminalDestinoCanton;
+  return extraerCanton(f.rutaDestino);
+};
+
 export default function FrecuenciasCooperativaPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -64,7 +91,8 @@ export default function FrecuenciasCooperativaPage() {
   // Filtros adicionales para la lista de frecuencias
   const [filterOrigen, setFilterOrigen] = useState<string>('');
   const [filterDestino, setFilterDestino] = useState<string>('');
-  const [filterDia, setFilterDia] = useState<string>('');
+  const [filterDiasSeleccionados, setFilterDiasSeleccionados] = useState<string[]>([]);
+  const [filterTipoFrecuencia, setFilterTipoFrecuencia] = useState<'TODAS' | 'INTERPROVINCIAL' | 'INTRAPROVINCIAL'>('TODAS');
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -271,20 +299,26 @@ export default function FrecuenciasCooperativaPage() {
     setFormData({ ...formData, diasOperacion: dias.join(',') });
   };
 
-  // Obtener lista única de orígenes y destinos de las frecuencias
-  const origenesUnicos = [...new Set(frecuencias.map(f => f.rutaOrigen).filter(Boolean))].sort();
-  const destinosUnicos = [...new Set(frecuencias.map(f => f.rutaDestino).filter(Boolean))].sort();
+  // Obtener lista única de cantones de origen y destino de las frecuencias
+  const origenesUnicos = [...new Set(frecuencias.map(f => getCantonOrigen(f)).filter(Boolean))].sort();
+  const destinosUnicos = [...new Set(frecuencias.map(f => getCantonDestino(f)).filter(Boolean))].sort();
 
   // Filtrar frecuencias
   const frecuenciasFiltradas = frecuencias.filter(f => {
     // Filtro por bus
     if (filterBusId && f.busId !== filterBusId) return false;
-    // Filtro por origen
-    if (filterOrigen && f.rutaOrigen !== filterOrigen) return false;
-    // Filtro por destino
-    if (filterDestino && f.rutaDestino !== filterDestino) return false;
-    // Filtro por día de operación
-    if (filterDia && !f.diasOperacion.includes(filterDia)) return false;
+    // Filtro por origen (comparar con el cantón)
+    if (filterOrigen && getCantonOrigen(f) !== filterOrigen) return false;
+    // Filtro por destino (comparar con el cantón)
+    if (filterDestino && getCantonDestino(f) !== filterDestino) return false;
+    // Filtro por tipo de frecuencia
+    if (filterTipoFrecuencia !== 'TODAS' && f.tipoFrecuencia !== filterTipoFrecuencia) return false;
+    // Filtro por días de operación (si hay días seleccionados, debe incluir al menos uno)
+    if (filterDiasSeleccionados.length > 0) {
+      const diasFrecuencia = f.diasOperacion.split(',');
+      const tieneAlgunDia = filterDiasSeleccionados.some(dia => diasFrecuencia.includes(dia));
+      if (!tieneAlgunDia) return false;
+    }
     return true;
   });
 
@@ -434,16 +468,17 @@ export default function FrecuenciasCooperativaPage() {
             <>
               {/* Filtros */}
               <div className="bg-white rounded-lg shadow p-4 mb-6">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-4">
                   <Filter className="w-4 h-4 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Filtros</span>
-                  {(filterBusId || filterOrigen || filterDestino || filterDia) && (
+                  {(filterBusId || filterOrigen || filterDestino || filterDiasSeleccionados.length > 0 || filterTipoFrecuencia !== 'TODAS') && (
                     <button
                       onClick={() => {
                         setFilterBusId(null);
                         setFilterOrigen('');
                         setFilterDestino('');
-                        setFilterDia('');
+                        setFilterDiasSeleccionados([]);
+                        setFilterTipoFrecuencia('TODAS');
                         setCurrentPage(1);
                       }}
                       className="ml-auto text-xs text-gray-500 hover:text-gray-700"
@@ -452,7 +487,46 @@ export default function FrecuenciasCooperativaPage() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                {/* Filtro por Tipo de Frecuencia - Botones */}
+                <div className="mb-4">
+                  <label className="block text-xs text-gray-500 mb-2">Tipo de Frecuencia</label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => { setFilterTipoFrecuencia('TODAS'); setCurrentPage(1); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filterTipoFrecuencia === 'TODAS'
+                          ? 'text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      style={filterTipoFrecuencia === 'TODAS' ? { backgroundColor: styles.primary } : {}}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      onClick={() => { setFilterTipoFrecuencia('INTERPROVINCIAL'); setCurrentPage(1); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filterTipoFrecuencia === 'INTERPROVINCIAL'
+                          ? 'text-white bg-purple-600'
+                          : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      }`}
+                    >
+                      Interprovincial
+                    </button>
+                    <button
+                      onClick={() => { setFilterTipoFrecuencia('INTRAPROVINCIAL'); setCurrentPage(1); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filterTipoFrecuencia === 'INTRAPROVINCIAL'
+                          ? 'text-white bg-cyan-600'
+                          : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+                      }`}
+                    >
+                      Intraprovincial
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   {/* Filtro por Bus */}
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Bus</label>
@@ -468,49 +542,73 @@ export default function FrecuenciasCooperativaPage() {
                     </select>
                   </div>
                   
-                  {/* Filtro por Origen */}
+                  {/* Filtro por Origen (Cantón) */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Origen</label>
+                    <label className="block text-xs text-gray-500 mb-1">Cantón Origen</label>
                     <select
                       value={filterOrigen}
                       onChange={(e) => handleFilterChange(setFilterOrigen, e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 coop-input-focus"
                     >
-                      <option value="">Todos los orígenes</option>
+                      <option value="">Todos los cantones</option>
                       {origenesUnicos.map(origen => (
                         <option key={origen} value={origen}>{origen}</option>
                       ))}
                     </select>
                   </div>
                   
-                  {/* Filtro por Destino */}
+                  {/* Filtro por Destino (Cantón) */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Destino</label>
+                    <label className="block text-xs text-gray-500 mb-1">Cantón Destino</label>
                     <select
                       value={filterDestino}
                       onChange={(e) => handleFilterChange(setFilterDestino, e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 coop-input-focus"
                     >
-                      <option value="">Todos los destinos</option>
+                      <option value="">Todos los cantones</option>
                       {destinosUnicos.map(destino => (
                         <option key={destino} value={destino}>{destino}</option>
                       ))}
                     </select>
                   </div>
-                  
-                  {/* Filtro por Día de Operación */}
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Día de Operación</label>
-                    <select
-                      value={filterDia}
-                      onChange={(e) => handleFilterChange(setFilterDia, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 coop-input-focus"
-                    >
-                      <option value="">Todos los días</option>
-                      {DIAS_SEMANA.map(dia => (
-                        <option key={dia} value={dia}>{dia}</option>
-                      ))}
-                    </select>
+                </div>
+                
+                {/* Filtro por Días de Operación - Botones de selección múltiple */}
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-500 mb-2">Días de Operación</label>
+                  <div className="flex flex-wrap gap-2">
+                    {DIAS_SEMANA.map(dia => {
+                      const isSelected = filterDiasSeleccionados.includes(dia);
+                      return (
+                        <button
+                          key={dia}
+                          onClick={() => {
+                            if (isSelected) {
+                              setFilterDiasSeleccionados(filterDiasSeleccionados.filter(d => d !== dia));
+                            } else {
+                              setFilterDiasSeleccionados([...filterDiasSeleccionados, dia]);
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isSelected
+                              ? 'text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          style={isSelected ? { backgroundColor: styles.primary } : {}}
+                        >
+                          {dia.slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                    {filterDiasSeleccionados.length > 0 && (
+                      <button
+                        onClick={() => { setFilterDiasSeleccionados([]); setCurrentPage(1); }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      >
+                        Limpiar días
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -539,7 +637,8 @@ export default function FrecuenciasCooperativaPage() {
                     setFilterBusId(null);
                     setFilterOrigen('');
                     setFilterDestino('');
-                    setFilterDia('');
+                    setFilterDiasSeleccionados([]);
+                    setFilterTipoFrecuencia('TODAS');
                   }}
                   className="mt-4 hover:opacity-80"
                   style={{ color: styles.primary }}
@@ -563,7 +662,7 @@ export default function FrecuenciasCooperativaPage() {
                         >
                           {frecuencia.busPlaca}
                         </span>
-                        <h3 className="text-lg font-semibold text-gray-900">{frecuencia.rutaNombre}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{getCantonOrigen(frecuencia)} → {getCantonDestino(frecuencia)}</h3>
                         {frecuencia.tipoFrecuencia && (
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             frecuencia.tipoFrecuencia === 'INTERPROVINCIAL'
@@ -575,7 +674,7 @@ export default function FrecuenciasCooperativaPage() {
                         )}
                       </div>
                       <p className="text-sm text-gray-600">
-                        {frecuencia.terminalOrigenNombre || frecuencia.rutaOrigen} → {frecuencia.terminalDestinoNombre || frecuencia.rutaDestino}
+                        {frecuencia.terminalOrigenNombre || 'Terminal Origen'} → {frecuencia.terminalDestinoNombre || 'Terminal Destino'}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -1120,6 +1219,7 @@ export default function FrecuenciasCooperativaPage() {
             frecuencias={frecuencias}
             buses={buses}
             cooperativaNombre={cooperativaConfig?.nombre || user?.cooperativaNombre || 'Cooperativa'}
+            cooperativaId={user?.cooperativaId}
           />
         </div>
       </div>

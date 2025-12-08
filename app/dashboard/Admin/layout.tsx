@@ -15,9 +15,11 @@ import {
   BarChart3,
   Shield,
   Users,
-  Navigation
+  Navigation,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 
 export default function AdminLayout({
@@ -30,6 +32,21 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Persistir estado de colapso en localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('adminSidebarCollapsed');
+    if (saved !== null) {
+      setSidebarCollapsed(saved === 'true');
+    }
+  }, []);
+
+  const toggleSidebarCollapse = () => {
+    const newValue = !sidebarCollapsed;
+    setSidebarCollapsed(newValue);
+    localStorage.setItem('adminSidebarCollapsed', String(newValue));
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -103,68 +120,96 @@ export default function AdminLayout({
     <ProtectedRoute allowedRoles={['ADMIN']}>
       <div className="flex h-screen bg-gray-50 overflow-hidden">
         {/* Sidebar Desktop */}
-        <aside className="hidden lg:flex lg:flex-col w-72 bg-white border-r border-gray-200 shadow-sm">
+        <aside 
+          className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ${
+            sidebarCollapsed ? 'w-20' : 'w-72'
+          }`}
+        >
           {/* Logo y título */}
           <div 
-            className="h-20 flex items-center border-b border-gray-200 px-4"
+            className="h-20 flex items-center border-b border-gray-200 px-4 relative"
             style={headerStyle}
           >
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
               {/* Logo */}
               {config?.logoUrl ? (
                 <div className="bg-white rounded-lg p-1.5 shadow-md shrink-0">
                   <img 
                     src={config.logoUrl} 
                     alt={appName} 
-                    className="h-10 w-10 object-contain"
+                    className={`object-contain ${sidebarCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`}
                   />
                 </div>
               ) : (
                 <div className="bg-white/20 rounded-lg p-2 shrink-0">
-                  <Shield className="w-8 h-8 text-white" />
+                  <Shield className={`text-white ${sidebarCollapsed ? 'w-6 h-6' : 'w-8 h-8'}`} />
                 </div>
               )}
               {/* Nombre y rol */}
-              <div className="min-w-0">
-                <h1 className="text-lg font-bold text-white truncate">{appName}</h1>
-                <p className="text-xs text-white/80">Super Administrador</p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <h1 className="text-lg font-bold text-white truncate">{appName}</h1>
+                  <p className="text-xs text-white/80">Super Administrador</p>
+                </div>
+              )}
             </div>
+            
+            {/* Botón de colapsar */}
+            <button
+              onClick={toggleSidebarCollapse}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white border border-gray-200 rounded-full p-1 shadow-md hover:bg-gray-50 transition-colors z-10"
+              title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
           </div>
 
           {/* Info del usuario */}
-          <div className="p-4 border-b border-gray-200 bg-linear-to-br from-gray-50 to-white">
-            <div className="flex items-center gap-3">
+          <div className={`border-b border-gray-200 bg-linear-to-br from-gray-50 to-white ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div 
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                className={`rounded-full flex items-center justify-center text-white font-bold ${
+                  sidebarCollapsed ? 'w-10 h-10 text-sm' : 'w-12 h-12 text-lg'
+                }`}
                 style={avatarStyle}
+                title={sidebarCollapsed ? (user ? getFullName(user) : 'Super Admin') : undefined}
               >
                 {user?.nombres?.charAt(0) || 'A'}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">
-                  {user ? getFullName(user) : 'Super Admin'}
-                </p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                <p 
-                  className="text-xs font-medium truncate mt-0.5"
-                  style={{ color: config?.colorPrimario || '#2563eb' }}
-                >
-                  🛡️ Superadministrador
-                </p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {user ? getFullName(user) : 'Super Admin'}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  <p 
+                    className="text-xs font-medium truncate mt-0.5"
+                    style={{ color: config?.colorPrimario || '#2563eb' }}
+                  >
+                    🛡️ Superadministrador
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Menú de navegación */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          <nav className={`flex-1 overflow-y-auto space-y-1 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.path}
                   onClick={() => router.push(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  className={`w-full flex items-center rounded-lg transition-all ${
+                    sidebarCollapsed 
+                      ? 'justify-center px-2 py-3' 
+                      : 'gap-3 px-4 py-3'
+                  } ${
                     item.active
                       ? 'shadow-md'
                       : 'text-gray-700 hover:bg-gray-100'
@@ -180,22 +225,30 @@ export default function AdminLayout({
                       e.currentTarget.style.color = '';
                     }
                   }}
+                  title={sidebarCollapsed ? item.label : undefined}
                 >
                   <Icon className="w-5 h-5 shrink-0" />
-                  <span className="font-medium text-sm">{item.label}</span>
+                  {!sidebarCollapsed && (
+                    <span className="font-medium text-sm">{item.label}</span>
+                  )}
                 </button>
               );
             })}
           </nav>
 
           {/* Botón de cerrar sesión */}
-          <div className="p-4 border-t border-gray-200">
+          <div className={`border-t border-gray-200 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all"
+              className={`w-full flex items-center rounded-lg text-red-600 hover:bg-red-50 transition-all ${
+                sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              }`}
+              title={sidebarCollapsed ? 'Cerrar Sesión' : undefined}
             >
               <LogOut className="w-5 h-5" />
-              <span className="font-medium text-sm">Cerrar Sesión</span>
+              {!sidebarCollapsed && (
+                <span className="font-medium text-sm">Cerrar Sesión</span>
+              )}
             </button>
           </div>
         </aside>

@@ -131,7 +131,16 @@ export default function CompraPage() {
       setPaso(3);
     } catch (err) {
       console.error('Error creando reserva:', err);
-      setError(err instanceof Error ? err.message : 'Error al crear la reserva');
+      const errorMsg = err instanceof Error ? err.message : 'Error al crear la reserva';
+      
+      // Manejar errores específicos de viaje iniciado
+      if (errorMsg.includes('VIAJE_INICIADO')) {
+        setError('⚠️ El viaje ya ha iniciado. No es posible realizar la reserva. Por favor, seleccione otra ruta.');
+      } else if (errorMsg.includes('VIAJE_COMPLETADO')) {
+        setError('El viaje ya ha finalizado. Por favor, seleccione otra ruta.');
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -141,6 +150,7 @@ export default function CompraPage() {
     if (!reservaId) return;
 
     setLoading(true);
+    setError('');
     try {
       // Generar boleto con QR
       const token = getToken();
@@ -154,7 +164,19 @@ export default function CompraPage() {
       setPaso(4);
     } catch (err) {
       console.error('Error generando boleto:', err);
-      setError(err instanceof Error ? err.message : 'Error al generar el boleto');
+      const errorMsg = err instanceof Error ? err.message : 'Error al generar el boleto';
+      
+      // Manejar errores específicos del estado del viaje
+      if (errorMsg.includes('VIAJE_INICIADO')) {
+        setError('🚌 ¡Lo sentimos! El viaje ya ha iniciado y no es posible emitir su boleto. Su pago será procesado para reembolso. Por favor, contacte a la cooperativa.');
+        // No avanzar al paso 4
+      } else if (errorMsg.includes('VIAJE_FINALIZADO')) {
+        setError('El viaje ya ha finalizado. No es posible emitir el boleto. Por favor, contacte a la cooperativa para solicitar un reembolso.');
+      } else if (errorMsg.includes('VIAJE_CANCELADO')) {
+        setError('El viaje ha sido cancelado. Por favor, contacte a la cooperativa para más información.');
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }

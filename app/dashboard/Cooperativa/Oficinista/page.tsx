@@ -3,7 +3,7 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { cooperativaApi, OficinistaStats, getToken } from '@/lib/api';
+import { cooperativaApi, OficinistaStats, getToken, cooperativaConfigApi, CooperativaConfigResponse } from '@/lib/api';
 import { 
   Ticket, 
   Calendar,
@@ -13,7 +13,8 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle,
-  Bell
+  Bell,
+  History
 } from 'lucide-react';
 
 export default function OficinistaDashboardPage() {
@@ -22,9 +23,10 @@ export default function OficinistaDashboardPage() {
   const [stats, setStats] = useState<OficinistaStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<CooperativaConfigResponse | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!user?.cooperativaId) {
         setLoading(false);
         return;
@@ -38,8 +40,13 @@ export default function OficinistaDashboardPage() {
           return;
         }
 
-        const data = await cooperativaApi.getOficinistaStats(user.cooperativaId, token);
-        setStats(data);
+        const [statsData, configData] = await Promise.all([
+          cooperativaApi.getOficinistaStats(user.cooperativaId, token),
+          cooperativaConfigApi.getConfiguracion(user.cooperativaId, token).catch(() => null)
+        ]);
+        
+        setStats(statsData);
+        setConfig(configData);
         setError(null);
       } catch (err) {
         console.error('Error al cargar estadísticas:', err);
@@ -49,8 +56,11 @@ export default function OficinistaDashboardPage() {
       }
     };
 
-    fetchStats();
+    fetchData();
   }, [user]);
+
+  // Colores institucionales
+  const primaryColor = config?.colorPrimario || '#7c3aed';
 
   // Notificaciones simuladas
   const notificaciones = [
@@ -96,7 +106,10 @@ export default function OficinistaDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {loading ? (
           <div className="col-span-full text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <div 
+              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto"
+              style={{ borderColor: primaryColor }}
+            ></div>
             <p className="mt-4 text-gray-600">Cargando estadísticas...</p>
           </div>
         ) : error ? (
@@ -182,10 +195,12 @@ export default function OficinistaDashboardPage() {
         {/* Acciones Rápidas */}
         <div className="lg:col-span-2">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Accesos Rápidos</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista/vender-boleto')}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md hover:border-purple-300 transition-all group"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
                 <Ticket className="w-6 h-6 text-blue-600" />
@@ -196,7 +211,9 @@ export default function OficinistaDashboardPage() {
 
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista/reservas')}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md hover:border-purple-300 transition-all group"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
                 <Calendar className="w-6 h-6 text-orange-600" />
@@ -207,24 +224,44 @@ export default function OficinistaDashboardPage() {
 
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista/buses-viaje')}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md hover:border-purple-300 transition-all group"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
                 <Bus className="w-6 h-6 text-green-600" />
               </div>
               <h3 className="font-semibold text-gray-800 mb-1">Buses en Viaje</h3>
-              <p className="text-sm text-gray-600">Monitoreo y estado de buses activos</p>
+              <p className="text-sm text-gray-600">Monitoreo en tiempo real</p>
+            </button>
+
+            <button
+              onClick={() => router.push('/dashboard/Cooperativa/Oficinista/viajes-pasados')}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
+            >
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors"
+                style={{ backgroundColor: primaryColor + '20' }}
+              >
+                <History className="w-6 h-6" style={{ color: primaryColor }} />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-1">Viajes Pasados</h3>
+              <p className="text-sm text-gray-600">Historial con mapas y pasajeros</p>
             </button>
 
             <button
               onClick={() => router.push('/dashboard/Cooperativa/Oficinista/mis-ventas')}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md hover:border-purple-300 transition-all group"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left hover:shadow-md transition-all group"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor + '80')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
             >
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-800 mb-1">Mis Ventas</h3>
-              <p className="text-sm text-gray-600">Historial y estadísticas de ventas</p>
+              <p className="text-sm text-gray-600">Historial y estadísticas</p>
             </button>
           </div>
         </div>
@@ -232,7 +269,7 @@ export default function OficinistaDashboardPage() {
         {/* Panel de Notificaciones */}
         <div className="lg:col-span-1">
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Bell className="w-5 h-5" />
+            <Bell className="w-5 h-5" style={{ color: primaryColor }} />
             Notificaciones
           </h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 max-h-96 overflow-y-auto">
@@ -262,7 +299,10 @@ export default function OficinistaDashboardPage() {
               );
             })}
           </div>
-          <button className="w-full mt-4 text-center text-sm text-purple-600 hover:text-purple-700 font-medium">
+          <button 
+            className="w-full mt-4 text-center text-sm font-medium hover:underline"
+            style={{ color: primaryColor }}
+          >
             Ver todas las notificaciones
           </button>
         </div>

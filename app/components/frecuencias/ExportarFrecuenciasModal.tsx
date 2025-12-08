@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
+import { useAuth } from '@/app/context/AuthContext';
 import {
   X,
   Download,
@@ -23,7 +24,7 @@ import {
   descargarExcel,
   ModoAsignacion,
 } from '@/lib/exportUtils';
-import { FrecuenciaViaje, BusDetailResponse } from '@/lib/api';
+import { FrecuenciaViaje, BusDetailResponse, busChoferApi } from '@/lib/api';
 
 interface Props {
   isOpen: boolean;
@@ -31,6 +32,7 @@ interface Props {
   frecuencias: FrecuenciaViaje[];
   buses: BusDetailResponse[];
   cooperativaNombre?: string;
+  cooperativaId?: number;
 }
 
 type TipoReporte = 'asignaciones' | 'porBus';
@@ -42,23 +44,65 @@ export default function ExportarFrecuenciasModal({
   frecuencias,
   buses,
   cooperativaNombre = 'Cooperativa',
+  cooperativaId,
 }: Props) {
   const { styles } = useCooperativaConfig();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [tipoReporte, setTipoReporte] = useState<TipoReporte>('asignaciones');
   const [formato, setFormato] = useState<FormatoExport>('excel');
   const [modoAsignacion, setModoAsignacion] = useState<ModoAsignacion>('rotativo');
+  const [choferesPorBus, setChoferesPorBus] = useState<Map<number, string[]>>(new Map());
+  const [loadingChoferes, setLoadingChoferes] = useState(false);
   
-  // Fechas por defecto: hoy y 2 semanas después
-  const [fechaInicio, setFechaInicio] = useState(() => {
+  // Calcular rango de fechas desde las frecuencias existentes
+  // Usamos la fecha actual y 2 semanas hacia adelante como referencia
+  const [fechaInicio] = useState(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today;
   });
-  const [fechaFin, setFechaFin] = useState(() => {
+  const [fechaFin] = useState(() => {
     const twoWeeks = new Date();
     twoWeeks.setDate(twoWeeks.getDate() + 14);
-    return twoWeeks.toISOString().split('T')[0];
+    return twoWeeks;
   });
+  
+  // Cargar choferes cuando se abre el modal y se selecciona reporte por bus
+  useEffect(() => {
+    if (isOpen && tipoReporte === 'porBus' && buses.length > 0) {
+      loadChoferes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, tipoReporte, buses]);
+  
+  const loadChoferes = async () => {
+    const coopId = cooperativaId || user?.cooperativaId;
+    if (!coopId) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    setLoadingChoferes(true);
+    const nuevosChoferes = new Map<number, string[]>();
+    
+    try {
+      for (const bus of buses) {
+        try {
+          const choferes = await busChoferApi.getChoferes(coopId, bus.id, token);
+          const nombres = choferes.map(c => c.choferNombre);
+          nuevosChoferes.set(bus.id, nombres);
+        } catch {
+          // Si falla para un bus, continuar con los demás
+          nuevosChoferes.set(bus.id, []);
+        }
+      }
+      setChoferesPorBus(nuevosChoferes);
+    } catch (error) {
+      console.error('Error al cargar choferes:', error);
+    } finally {
+      setLoadingChoferes(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -66,16 +110,14 @@ export default function ExportarFrecuenciasModal({
     setLoading(true);
     
     try {
-      const fechaInicioDate = new Date(fechaInicio + 'T00:00:00');
-      const fechaFinDate = new Date(fechaFin + 'T00:00:00');
       const fechaActual = new Date().toISOString().split('T')[0].replace(/-/g, '');
       
       if (tipoReporte === 'asignaciones') {
         const reporte = generarReporteAsignaciones(
           frecuencias,
           buses,
-          fechaInicioDate,
-          fechaFinDate,
+          fechaInicio,
+          fechaFin,
           `HORAS DE TRABAJO - ${cooperativaNombre.toUpperCase()}`,
           modoAsignacion
         );
@@ -88,8 +130,8 @@ export default function ExportarFrecuenciasModal({
           descargarExcel(excel, `Asignaciones_${cooperativaNombre}_${fechaActual}.xls`);
         }
       } else {
-        // Reporte por bus
-        const reportes = generarReportePorBus(frecuencias, buses);
+        // Reporte por bus (incluye choferes asignados)
+        const reportes = generarReportePorBus(frecuencias, buses, choferesPorBus);
         const csv = reportePorBusToCSV(reportes);
         descargarCSV(csv, `FrecuenciasPorBus_${cooperativaNombre}_${fechaActual}.csv`);
       }
@@ -184,52 +226,11 @@ export default function ExportarFrecuenciasModal({
                   Frecuencias por bus
                 </span>
                 <span className="text-xs text-gray-500 text-center">
-                  Lista de rutas asignadas a cada bus
+                  Lista de rutas y choferes por bus
                 </span>
               </button>
             </div>
           </div>
-
-          {/* Rango de fechas (solo para asignaciones) */}
-          {tipoReporte === 'asignaciones' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Rango de fechas
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Desde</label>
-                  <input
-                    type="date"
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2"
-                    style={{ 
-                      // @ts-ignore
-                      '--tw-ring-color': styles.primary 
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Hasta</label>
-                  <input
-                    type="date"
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
-                    min={fechaInicio}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2"
-                    style={{ 
-                      // @ts-ignore
-                      '--tw-ring-color': styles.primary 
-                    }}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Se generará una columna por cada día en el rango seleccionado
-              </p>
-            </div>
-          )}
 
           {/* Modo de asignación (solo para asignaciones) */}
           {tipoReporte === 'asignaciones' && (
@@ -367,10 +368,13 @@ export default function ExportarFrecuenciasModal({
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>{frecuencias.length} frecuencias registradas</li>
               <li>{buses.length} buses en la cooperativa</li>
-              {tipoReporte === 'asignaciones' && (
+              {tipoReporte === 'porBus' && (
                 <li>
-                  {Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)) + 1} días en el rango
+                  {loadingChoferes ? 'Cargando choferes...' : `${choferesPorBus.size} buses con información de choferes`}
                 </li>
+              )}
+              {tipoReporte === 'asignaciones' && (
+                <li>Período: 15 días desde la fecha actual</li>
               )}
             </ul>
           </div>
@@ -386,13 +390,13 @@ export default function ExportarFrecuenciasModal({
           </button>
           <button
             onClick={handleExportar}
-            disabled={loading || frecuencias.length === 0}
+            disabled={loading || frecuencias.length === 0 || (tipoReporte === 'porBus' && loadingChoferes)}
             className="flex items-center gap-2 px-6 py-2 text-white rounded-lg disabled:opacity-50 transition-colors"
             style={{ backgroundColor: styles.primary }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = styles.primaryDark}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = styles.primary}
           >
-            {loading ? (
+            {loading || (tipoReporte === 'porBus' && loadingChoferes) ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Download className="w-4 h-4" />

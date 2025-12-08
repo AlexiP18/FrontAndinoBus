@@ -22,6 +22,39 @@ export interface ReporteAsignaciones {
 }
 
 /**
+ * Función helper para extraer el cantón de un string
+ * El formato puede ser "Provincia|Canton|ID" o simplemente un nombre de terminal/lugar
+ */
+export function extraerCanton(valor: string | undefined | null): string {
+  if (!valor) return '';
+  // Si contiene el separador |, extraer el cantón (segundo elemento)
+  if (valor.includes('|')) {
+    const partes = valor.split('|');
+    return partes[1] || partes[0] || valor;
+  }
+  // Si no tiene separador, devolver el valor tal cual
+  return valor;
+}
+
+/**
+ * Obtiene el cantón de origen de una frecuencia
+ * Prioriza el cantón del terminal, luego extrae del rutaOrigen
+ */
+export function getCantonOrigen(f: FrecuenciaViaje): string {
+  if (f.terminalOrigenCanton) return f.terminalOrigenCanton;
+  return extraerCanton(f.rutaOrigen);
+}
+
+/**
+ * Obtiene el cantón de destino de una frecuencia
+ * Prioriza el cantón del terminal, luego extrae del rutaDestino
+ */
+export function getCantonDestino(f: FrecuenciaViaje): string {
+  if (f.terminalDestinoCanton) return f.terminalDestinoCanton;
+  return extraerCanton(f.rutaDestino);
+}
+
+/**
  * Genera las fechas entre dos rangos
  */
 export function generarRangoFechas(inicio: Date, fin: Date): Date[] {
@@ -124,8 +157,8 @@ export function generarReporteAsignaciones(
     return {
       dia: index + 1,
       horaSalida: frec.horaSalida,
-      origen: frec.rutaOrigen || '',
-      destino: frec.rutaDestino || '',
+      origen: getCantonOrigen(frec),
+      destino: getCantonDestino(frec),
       horaLlegada: frec.horaLlegadaEstimada || '',
       fechas: fechasAsignadas,
     };
@@ -333,6 +366,7 @@ export function descargarExcel(contenido: string, nombreArchivo: string): void {
 export interface ReportePorBus {
   busPlaca: string;
   busId: number;
+  choferes: string[]; // Nombres de los choferes asignados
   frecuencias: {
     horaSalida: string;
     origen: string;
@@ -341,9 +375,16 @@ export interface ReportePorBus {
   }[];
 }
 
+// Interfaz para los choferes del bus
+export interface ChoferBusInfo {
+  busId: number;
+  choferes: string[];
+}
+
 export function generarReportePorBus(
   frecuencias: FrecuenciaViaje[],
-  buses: BusDetailResponse[]
+  buses: BusDetailResponse[],
+  choferesPorBus?: Map<number, string[]>
 ): ReportePorBus[] {
   const reportePorBus: Map<number, ReportePorBus> = new Map();
 
@@ -352,6 +393,7 @@ export function generarReportePorBus(
     reportePorBus.set(bus.id, {
       busPlaca: bus.placa,
       busId: bus.id,
+      choferes: choferesPorBus?.get(bus.id) || [],
       frecuencias: [],
     });
   }
@@ -362,8 +404,8 @@ export function generarReportePorBus(
     if (reporte) {
       reporte.frecuencias.push({
         horaSalida: frec.horaSalida,
-        origen: frec.rutaOrigen || '',
-        destino: frec.rutaDestino || '',
+        origen: getCantonOrigen(frec),
+        destino: getCantonDestino(frec),
         diasOperacion: frec.diasOperacion,
       });
     }
@@ -385,6 +427,9 @@ export function reportePorBusToCSV(reportes: ReportePorBus[]): string {
   
   for (const reporte of reportes) {
     csv += `BUS: ${reporte.busPlaca}\n`;
+    if (reporte.choferes.length > 0) {
+      csv += `CHOFERES ASIGNADOS: ${reporte.choferes.join(', ')}\n`;
+    }
     csv += 'HORA SALIDA;ORIGEN;DESTINO;DÍAS DE OPERACIÓN\n';
     
     for (const frec of reporte.frecuencias) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Ticket, MapPin, Clock, Bus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Ticket, MapPin, Clock, Bus, ChevronDown, ChevronUp, Route } from 'lucide-react';
 import MapaTrackingViaje from './MapaTrackingViaje';
 
 interface BoletoConViaje {
@@ -20,6 +20,13 @@ interface BoletoConViaje {
     horaSalida: string;
     horaLlegadaEstimada: string;
     estadoViaje: string;
+    // Coordenadas de terminales para mostrar la ruta
+    terminalOrigenLatitud?: number;
+    terminalOrigenLongitud?: number;
+    terminalDestinoLatitud?: number;
+    terminalDestinoLongitud?: number;
+    terminalOrigenNombre?: string;
+    terminalDestinoNombre?: string;
   };
 }
 
@@ -230,6 +237,24 @@ function BoletoTrackingItem({
       {/* Mapa expandido */}
       {isExpanded && !isCompleted && (
         <div className="mt-6 border-t border-gray-200 pt-6">
+          {/* Leyenda de la ruta */}
+          {boleto.viaje.terminalOrigenLatitud && boleto.viaje.terminalDestinoLatitud && (
+            <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-gray-600">Origen: {boleto.viaje.terminalOrigenNombre || boleto.viaje.rutaOrigen}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <span className="text-gray-600">Destino: {boleto.viaje.terminalDestinoNombre || boleto.viaje.rutaDestino}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span className="text-gray-600">Bus actual</span>
+              </div>
+            </div>
+          )}
+
           <MapaTrackingViaje
             viajeId={boleto.viajeId}
             token={token}
@@ -237,6 +262,25 @@ function BoletoTrackingItem({
             autoRefresh={true}
             refreshInterval={10000}
             className="h-[400px]"
+            showRoute={!!(boleto.viaje.terminalOrigenLatitud && boleto.viaje.terminalDestinoLatitud)}
+            terminalOrigen={
+              boleto.viaje.terminalOrigenLatitud && boleto.viaje.terminalOrigenLongitud
+                ? {
+                    lat: boleto.viaje.terminalOrigenLatitud,
+                    lng: boleto.viaje.terminalOrigenLongitud,
+                    nombre: boleto.viaje.terminalOrigenNombre,
+                  }
+                : undefined
+            }
+            terminalDestino={
+              boleto.viaje.terminalDestinoLatitud && boleto.viaje.terminalDestinoLongitud
+                ? {
+                    lat: boleto.viaje.terminalDestinoLatitud,
+                    lng: boleto.viaje.terminalDestinoLongitud,
+                    nombre: boleto.viaje.terminalDestinoNombre,
+                  }
+                : undefined
+            }
           />
 
           {/* Información adicional */}

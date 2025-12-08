@@ -6,7 +6,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { personalApi, PersonalDetailResponse, CreatePersonalRequest, UpdatePersonalRequest, getToken } from '@/lib/api';
-import { Edit, Trash2, Grid3x3, Table, User, Upload, Mail, CreditCard, Phone, FileText, X, Building2 } from 'lucide-react';
+import { Edit, Trash2, Grid3x3, Table, User, Upload, Mail, CreditCard, Phone, FileText, X, Building2, Users, Bus, Briefcase, UserCog } from 'lucide-react';
 import AsignarTerminalesModal from '@/app/components/AsignarTerminalesModal';
 
 type ViewMode = 'table' | 'cards';
@@ -25,6 +25,7 @@ export default function PersonalManagementPage() {
   const [selectedDriver, setSelectedDriver] = useState<PersonalDetailResponse | null>(null);
   const [editingPersonal, setEditingPersonal] = useState<PersonalDetailResponse | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [filterRol, setFilterRol] = useState<string>('TODOS');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<CreatePersonalRequest>({
@@ -267,6 +268,19 @@ export default function PersonalManagementPage() {
     }
   };
 
+  // Filtrar personal por rol
+  const filteredPersonal = filterRol === 'TODOS' 
+    ? personal 
+    : personal.filter(p => p.rolCooperativa === filterRol);
+
+  // Contadores por rol
+  const countByRol = {
+    TODOS: personal.length,
+    ADMIN: personal.filter(p => p.rolCooperativa === 'ADMIN').length,
+    OFICINISTA: personal.filter(p => p.rolCooperativa === 'OFICINISTA').length,
+    CHOFER: personal.filter(p => p.rolCooperativa === 'CHOFER').length,
+  };
+
   return (
     <ProtectedRoute allowedRoles={['COOPERATIVA']} allowedRolesCooperativa={['ADMIN']}>
       <div className="min-h-screen bg-gray-50">
@@ -330,6 +344,41 @@ export default function PersonalManagementPage() {
             </div>
           </div>
 
+          {/* Filtros por Rol */}
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'TODOS', label: 'Todos', Icon: Users },
+                { value: 'ADMIN', label: 'Administradores', Icon: UserCog },
+                { value: 'CHOFER', label: 'Choferes', Icon: Bus },
+                { value: 'OFICINISTA', label: 'Oficinistas', Icon: Building2 },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setFilterRol(filter.value)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                    filterRol === filter.value
+                      ? 'text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                  style={filterRol === filter.value ? { backgroundColor: styles.primary } : undefined}
+                >
+                  <filter.Icon className="w-4 h-4" />
+                  <span>{filter.label}</span>
+                  <span 
+                    className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
+                      filterRol === filter.value 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {countByRol[filter.value as keyof typeof countByRol]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Error Alert */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -345,9 +394,9 @@ export default function PersonalManagementPage() {
           )}
 
           {/* Cards View */}
-          {!loading && personal.length > 0 && viewMode === 'cards' && (
+          {!loading && filteredPersonal.length > 0 && viewMode === 'cards' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {personal.map((person) => (
+              {filteredPersonal.map((person) => (
                 <div
                   key={person.id}
                   className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200"
@@ -404,6 +453,24 @@ export default function PersonalManagementPage() {
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Phone className="w-4 h-4 text-gray-500" />
                         <span>{person.telefono}</span>
+                      </div>
+                    )}
+                    {/* Bus asignado para CHOFER */}
+                    {person.rolCooperativa === 'CHOFER' && person.busAsignadoPlaca && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Bus className="w-4 h-4 text-orange-500" />
+                        <span className="font-medium text-orange-700">
+                          {person.busAsignadoPlaca}
+                          {person.busAsignadoNumeroInterno && (
+                            <span className="text-gray-500 ml-1">#{person.busAsignadoNumeroInterno}</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {person.rolCooperativa === 'CHOFER' && !person.busAsignadoPlaca && (
+                      <div className="flex items-center gap-2 text-sm text-gray-400 italic">
+                        <Bus className="w-4 h-4" />
+                        <span>Sin bus asignado</span>
                       </div>
                     )}
                   </div>
@@ -470,7 +537,7 @@ export default function PersonalManagementPage() {
           )}
 
           {/* Table View */}
-          {!loading && personal.length > 0 && viewMode === 'table' && (
+          {!loading && filteredPersonal.length > 0 && viewMode === 'table' && (
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -490,13 +557,16 @@ export default function PersonalManagementPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rol
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Bus Asignado
+                    </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10">
                       Acciones
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {personal.map((person) => (
+                  {filteredPersonal.map((person) => (
                     <tr key={person.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
                         <div className="flex items-center gap-3">
@@ -537,6 +607,25 @@ export default function PersonalManagementPage() {
                         >
                           {getRolName(person.rolCooperativa)}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {person.rolCooperativa === 'CHOFER' ? (
+                          person.busAsignadoPlaca ? (
+                            <div className="flex items-center gap-2">
+                              <Bus className="w-4 h-4 text-orange-500" />
+                              <span className="text-sm font-medium text-orange-700">
+                                {person.busAsignadoPlaca}
+                                {person.busAsignadoNumeroInterno && (
+                                  <span className="text-gray-500 ml-1">#{person.busAsignadoNumeroInterno}</span>
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">Sin bus</span>
+                          )
+                        ) : (
+                          <span className="text-sm text-gray-300">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap sticky right-0 bg-white z-10">
                         <div className="flex items-center justify-center gap-3">
@@ -600,11 +689,32 @@ export default function PersonalManagementPage() {
           )}
 
           {/* Empty State */}
-          {!loading && personal.length === 0 && (
+          {!loading && filteredPersonal.length === 0 && (
             <div className="bg-white rounded-lg shadow p-12 text-center">
-              <div className="text-6xl mb-4">👥</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">No hay personal registrado</h3>
-              <p className="text-gray-600 mb-6">Comienza agregando tu primer usuario</p>
+              <div className="flex justify-center mb-4">
+                {filterRol === 'TODOS' && <Users className="w-16 h-16 text-gray-400" />}
+                {filterRol === 'ADMIN' && <UserCog className="w-16 h-16 text-gray-400" />}
+                {filterRol === 'CHOFER' && <Bus className="w-16 h-16 text-gray-400" />}
+                {filterRol === 'OFICINISTA' && <Building2 className="w-16 h-16 text-gray-400" />}
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                {filterRol === 'TODOS' 
+                  ? 'No hay personal registrado'
+                  : `No hay ${filterRol === 'ADMIN' ? 'administradores' : filterRol === 'CHOFER' ? 'choferes' : 'oficinistas'}`}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {filterRol === 'TODOS' 
+                  ? 'Comienza agregando tu primer usuario'
+                  : `No se encontraron ${filterRol === 'ADMIN' ? 'administradores' : filterRol === 'CHOFER' ? 'choferes' : 'oficinistas'} registrados`}
+              </p>
+              {filterRol !== 'TODOS' && (
+                <button
+                  onClick={() => setFilterRol('TODOS')}
+                  className="mr-3 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Ver todos
+                </button>
+              )}
               <button
                 onClick={() => handleOpenModal()}
                 className="text-white px-6 py-3 rounded-lg font-semibold transition-colors"
@@ -612,7 +722,7 @@ export default function PersonalManagementPage() {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = styles.primaryDark}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = styles.primary}
               >
-                + Agregar Primer Usuario
+                + Agregar Usuario
               </button>
             </div>
           )}

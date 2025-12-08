@@ -24,6 +24,13 @@ interface BoletoConViaje {
     horaSalida: string;
     horaLlegadaEstimada: string;
     estadoViaje: string;
+    // Coordenadas de terminales para mostrar la ruta
+    terminalOrigenLatitud?: number;
+    terminalOrigenLongitud?: number;
+    terminalDestinoLatitud?: number;
+    terminalDestinoLongitud?: number;
+    terminalOrigenNombre?: string;
+    terminalDestinoNombre?: string;
   };
 }
 
@@ -91,6 +98,13 @@ function TrackingClienteContent() {
           horaSalida: viaje.horaSalida,
           horaLlegadaEstimada: viaje.horaLlegadaEstimada,
           estadoViaje: viaje.estado,
+          // Coordenadas de terminales
+          terminalOrigenLatitud: viaje.terminalOrigenLatitud,
+          terminalOrigenLongitud: viaje.terminalOrigenLongitud,
+          terminalDestinoLatitud: viaje.terminalDestinoLatitud,
+          terminalDestinoLongitud: viaje.terminalDestinoLongitud,
+          terminalOrigenNombre: viaje.terminalOrigenNombre,
+          terminalDestinoNombre: viaje.terminalDestinoNombre,
         }
       }));
 

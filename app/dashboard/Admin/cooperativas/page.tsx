@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { useConfig } from '@/app/context/ConfigContext';
 import { superAdminApi, type CooperativaInfo, getToken } from '@/lib/api';
+import Image from 'next/image';
 import { 
   Building2,
   Bus,
@@ -15,8 +16,22 @@ import {
   Plus,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Edit
 } from 'lucide-react';
+
+// Función para resolver URLs de recursos
+const resolveResourceUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) {
+    // Obtener la URL base sin /api
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api';
+    const backendUrl = apiUrl.replace(/\/api$/, '');
+    return `${backendUrl}${url}`;
+  }
+  return url;
+};
 
 type ViewMode = 'cards' | 'table';
 type FilterType = 'all' | 'active' | 'inactive';
@@ -31,11 +46,18 @@ export default function CooperativasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [logoErrors, setLogoErrors] = useState<Set<number>>(new Set()); // Track logo load errors by cooperativa ID
 
   // Colores dinámicos
   const primaryColor = config?.colorPrimario || '#2563eb';
   const secondaryColor = config?.colorSecundario || '#3b82f6';
   const accentColor = config?.colorAcento || '#10b981';
+
+  // Handler para errores de carga de logo
+  const handleLogoError = (cooperativaId: number, logoUrl: string) => {
+    console.error('Error cargando logo:', logoUrl);
+    setLogoErrors(prev => new Set(prev).add(cooperativaId));
+  };
 
   const filterCooperativas = useCallback(() => {
     let filtered = [...cooperativas];
@@ -354,34 +376,49 @@ export default function CooperativasPage() {
         ) : viewMode === 'cards' ? (
           /* Cards View */
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredCooperativas.map((coop) => (
-              <div
-                key={coop.id}
-                onClick={() => router.push(`/dashboard/Admin/cooperativas/${coop.id}`)}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-gray-200 overflow-hidden group"
-              >
-                <div className="bg-linear-to-r from-blue-500 to-blue-600 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                      <Building2 className="w-6 h-6 text-white" />
-                    </div>
-                    <button
-                      onClick={(e) => handleToggleEstado(coop.id, coop.nombre, coop.activo, e)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 ${
-                        coop.activo
-                          ? 'bg-green-500'
-                          : 'bg-gray-400'
-                      }`}
-                      title={coop.activo ? 'Desactivar cooperativa' : 'Activar cooperativa'}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          coop.activo ? 'translate-x-6' : 'translate-x-1'
+            {filteredCooperativas.map((coop) => {
+              const logoUrl = resolveResourceUrl(coop.logoUrl);
+              
+              return (
+                <div
+                  key={coop.id}
+                  onClick={() => router.push(`/dashboard/Admin/cooperativas/${coop.id}`)}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-gray-200 overflow-hidden group"
+                >
+                  <div className="bg-linear-to-r from-blue-500 to-blue-600 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-md">
+                        {logoUrl && !logoErrors.has(coop.id) ? (
+                          <Image
+                            src={logoUrl}
+                            alt={`Logo de ${coop.nombre}`}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-contain"
+                            unoptimized
+                            onError={() => handleLogoError(coop.id, logoUrl)}
+                          />
+                        ) : (
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => handleToggleEstado(coop.id, coop.nombre, coop.activo, e)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 ${
+                          coop.activo
+                            ? 'bg-green-500'
+                            : 'bg-gray-400'
                         }`}
-                      />
-                    </button>
+                        title={coop.activo ? 'Desactivar cooperativa' : 'Activar cooperativa'}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            coop.activo ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
@@ -408,15 +445,26 @@ export default function CooperativasPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <button className="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-2 group-hover:bg-blue-600 group-hover:text-white">
+                  <div className="mt-4 flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/dashboard/Admin/cooperativas/${coop.id}/editar`);
+                      }}
+                      className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Editar
+                    </button>
+                    <button className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-2 group-hover:bg-blue-600 group-hover:text-white">
                       <Eye className="w-4 h-4" />
                       Ver Detalles
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           /* Table View */
@@ -446,55 +494,80 @@ export default function CooperativasPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCooperativas.map((coop) => (
-                    <tr key={coop.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-blue-600" />
+                  {filteredCooperativas.map((coop) => {
+                    const logoUrl = resolveResourceUrl(coop.logoUrl);
+                    
+                    return (
+                      <tr key={coop.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
+                              {logoUrl && !logoErrors.has(coop.id) ? (
+                                <Image
+                                  src={logoUrl}
+                                  alt={`Logo de ${coop.nombre}`}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-contain"
+                                  unoptimized
+                                  onError={() => handleLogoError(coop.id, logoUrl)}
+                                />
+                              ) : (
+                                <Building2 className="w-5 h-5 text-blue-600" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{coop.nombre}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">{coop.nombre}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">{coop.ruc}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-semibold text-orange-600">{coop.cantidadBuses}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-semibold text-purple-600">{coop.cantidadPersonal}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button
-                          onClick={(e) => handleToggleEstado(coop.id, coop.nombre, coop.activo, e)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                            coop.activo
-                              ? 'bg-green-600 focus:ring-green-500'
-                              : 'bg-gray-300 focus:ring-gray-400'
-                          }`}
-                          title={coop.activo ? 'Desactivar cooperativa' : 'Activar cooperativa'}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              coop.activo ? 'translate-x-6' : 'translate-x-1'
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">{coop.ruc}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm font-semibold text-orange-600">{coop.cantidadBuses}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm font-semibold text-purple-600">{coop.cantidadPersonal}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={(e) => handleToggleEstado(coop.id, coop.nombre, coop.activo, e)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                              coop.activo
+                                ? 'bg-green-600 focus:ring-green-500'
+                                : 'bg-gray-300 focus:ring-gray-400'
                             }`}
-                          />
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button
-                          onClick={() => router.push(`/dashboard/Admin/cooperativas/${coop.id}`)}
-                          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Ver Detalles
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                            title={coop.activo ? 'Desactivar cooperativa' : 'Activar cooperativa'}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                coop.activo ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => router.push(`/dashboard/Admin/cooperativas/${coop.id}/editar`)}
+                              className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-800 font-medium text-sm hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => router.push(`/dashboard/Admin/cooperativas/${coop.id}`)}
+                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Ver
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

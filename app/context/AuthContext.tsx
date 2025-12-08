@@ -9,7 +9,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string, tipoUsuario?: 'CLIENTE' | 'COOPERATIVA' | 'ADMIN') => Promise<void>;
-  register: (email: string, password: string, nombres?: string, apellidos?: string) => Promise<void>;
+  register: (email: string, password: string, nombres?: string, apellidos?: string) => Promise<{ requiresConfirmation: boolean; message: string; email?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -148,27 +148,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = dashboardPath;
   };
 
-  const register = async (email: string, password: string, nombres?: string, apellidos?: string) => {
+  interface RegisterResult {
+    requiresConfirmation: boolean;
+    message: string;
+    email?: string;
+  }
+
+  const register = async (email: string, password: string, nombres?: string, apellidos?: string): Promise<RegisterResult> => {
     const response: AuthResponse = await authApi.register({ email, password, nombres, apellidos });
     
-    // Guardar token
-    localStorage.setItem('token', response.token);
-    setToken(response.token);
-
-    // Guardar datos del usuario
-    const userData: MeResponse = {
-      userId: response.userId,
-      email: response.email,
-      rol: response.rol as 'CLIENTE' | 'COOPERATIVA' | 'ADMIN',
-      nombres: response.nombres,
-      apellidos: response.apellidos,
-    };
+    // Si requiere confirmación de email, no guardar token ni redirigir
+    if (response.requiresConfirmation) {
+      return {
+        requiresConfirmation: true,
+        message: response.message || 'Por favor revisa tu correo para confirmar tu cuenta.',
+        email: response.email
+      };
+    }
     
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    // Comportamiento original si no requiere confirmación (para compatibilidad)
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
 
-    // Redirigir al dashboard de cliente (por defecto)
-    router.push('/dashboard/Cliente');
+      const userData: MeResponse = {
+        userId: response.userId,
+        email: response.email,
+        rol: response.rol as 'CLIENTE' | 'COOPERATIVA' | 'ADMIN',
+        nombres: response.nombres,
+        apellidos: response.apellidos,
+      };
+      
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+
+      router.push('/dashboard/Cliente');
+    }
+    
+    return {
+      requiresConfirmation: false,
+      message: 'Registro exitoso'
+    };
   };
 
   const logout = async () => {

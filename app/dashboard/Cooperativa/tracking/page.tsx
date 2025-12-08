@@ -7,6 +7,12 @@ import ModalMapaTracking from '@/app/components/ModalMapaTracking';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { Activity } from 'lucide-react';
 
+interface TerminalCoords {
+  lat: number;
+  lng: number;
+  nombre?: string;
+}
+
 interface ViajeCooperativa {
   id: number;
   busPlaca: string;
@@ -17,6 +23,8 @@ interface ViajeCooperativa {
   estado: string;
   numeroPasajeros: number;
   capacidadTotal: number;
+  terminalOrigen?: TerminalCoords;
+  terminalDestino?: TerminalCoords;
 }
 
 export default function TrackingCooperativaPage() {
@@ -32,7 +40,7 @@ function TrackingCooperativaContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
-  const [viajeSeleccionado, setViajeSeleccionado] = useState<number | null>(null);
+  const [viajeSeleccionado, setViajeSeleccionado] = useState<ViajeCooperativa | null>(null);
   const [cooperativaId, setCooperativaId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -80,6 +88,16 @@ function TrackingCooperativaContent() {
         estado: viaje.estado,
         numeroPasajeros: viaje.numeroPasajeros,
         capacidadTotal: viaje.capacidadTotal,
+        terminalOrigen: viaje.terminalOrigenLatitud && viaje.terminalOrigenLongitud ? {
+          lat: viaje.terminalOrigenLatitud,
+          lng: viaje.terminalOrigenLongitud,
+          nombre: viaje.terminalOrigenNombre || viaje.rutaOrigen,
+        } : undefined,
+        terminalDestino: viaje.terminalDestinoLatitud && viaje.terminalDestinoLongitud ? {
+          lat: viaje.terminalDestinoLatitud,
+          lng: viaje.terminalDestinoLongitud,
+          nombre: viaje.terminalDestinoNombre || viaje.rutaDestino,
+        } : undefined,
       }));
 
       setViajes(viajesFormateados);
@@ -92,7 +110,10 @@ function TrackingCooperativaContent() {
   };
 
   const handleVerDetalles = (viajeId: number) => {
-    setViajeSeleccionado(viajeId);
+    const viaje = viajes.find(v => v.id === viajeId);
+    if (viaje) {
+      setViajeSeleccionado(viaje);
+    }
   };
 
   const handleCerrarModal = () => {
@@ -148,10 +169,12 @@ function TrackingCooperativaContent() {
       {/* Modal de detalles */}
       {viajeSeleccionado && (
         <ModalMapaTracking
-          viajeId={viajeSeleccionado}
+          viajeId={viajeSeleccionado.id}
           token={token}
           onClose={handleCerrarModal}
-          titulo={`Tracking - Viaje #${viajeSeleccionado}`}
+          titulo={`Tracking - Viaje #${viajeSeleccionado.id}`}
+          terminalOrigen={viajeSeleccionado.terminalOrigen}
+          terminalDestino={viajeSeleccionado.terminalDestino}
         />
       )}
     </div>

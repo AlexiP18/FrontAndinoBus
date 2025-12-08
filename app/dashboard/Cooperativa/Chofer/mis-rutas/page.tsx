@@ -13,8 +13,22 @@ import {
   TrendingUp, 
   ArrowLeft,
   AlertCircle,
-  Route as RouteIcon
+  Route as RouteIcon,
+  Bus
 } from 'lucide-react';
+
+// Función helper para extraer el cantón de un string
+// El formato puede ser "Provincia|Canton|ID" o simplemente un nombre de terminal/lugar
+const extraerCanton = (valor: string | undefined | null): string => {
+  if (!valor) return '';
+  // Si contiene el separador |, extraer el cantón (segundo elemento)
+  if (valor.includes('|')) {
+    const partes = valor.split('|');
+    return partes[1] || partes[0] || valor;
+  }
+  // Si no tiene separador, devolver el valor tal cual
+  return valor;
+};
 
 function MisRutasChoferPage() {
   const router = useRouter();
@@ -133,7 +147,7 @@ function MisRutasChoferPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">🛣️ Mis Rutas</h1>
-              <p className="text-gray-600 mt-1">Rutas asignadas a tu cooperativa</p>
+              <p className="text-gray-600 mt-1">Rutas y frecuencias asignadas a ti</p>
             </div>
           </div>
 
@@ -192,12 +206,17 @@ function MisRutasChoferPage() {
             {rutas.length === 0 ? (
               <div className="text-center py-12">
                 <RouteIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No hay rutas asignadas a tu cooperativa</p>
-                <p className="text-gray-400 text-sm mt-2">Las rutas aparecerán aquí cuando se configuren en el sistema</p>
+                <p className="text-gray-500 text-lg">No hay rutas asignadas</p>
+                <p className="text-gray-400 text-sm mt-2">Las rutas aparecerán aquí cuando tengas un bus asignado con frecuencias configuradas</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {rutas.map((ruta) => (
+                {rutas.map((ruta) => {
+                  // Extraer cantones del formato "PROVINCIA|CANTON|ID" si es necesario
+                  const cantonOrigen = extraerCanton(ruta.origen);
+                  const cantonDestino = extraerCanton(ruta.destino);
+                  
+                  return (
                   <div
                     key={ruta.id}
                     className={`border rounded-lg p-5 transition-all hover:shadow-md ${
@@ -212,10 +231,17 @@ function MisRutasChoferPage() {
                         <div className="flex items-center gap-3 mb-3">
                           <MapPin className="w-6 h-6 shrink-0" style={{ color: primaryColor }} />
                           <div>
+                            {/* Título: Cantón origen → Cantón destino */}
                             <h3 className="text-lg font-bold text-gray-800">
-                              {ruta.origen} → {ruta.destino}
+                              {cantonOrigen} → {cantonDestino}
                             </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                            {/* Subtítulo: Nombres de las terminales */}
+                            {(ruta.terminalOrigenNombre || ruta.terminalDestinoNombre) && (
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                {ruta.terminalOrigenNombre || 'Terminal'} → {ruta.terminalDestinoNombre || 'Terminal'}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-2 flex-wrap">
                               <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 ruta.activa 
                                   ? 'bg-green-100 text-green-800' 
@@ -223,6 +249,15 @@ function MisRutasChoferPage() {
                               }`}>
                                 {ruta.activa ? '✓ Activa' : '✗ Inactiva'}
                               </span>
+                              {ruta.busPlaca && (
+                                <>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                                    <Bus className="w-3 h-3" />
+                                    {ruta.busPlaca}
+                                  </span>
+                                </>
+                              )}
                               <span className="text-gray-400">•</span>
                               <span className="flex items-center gap-1">
                                 <TrendingUp className="w-4 h-4" />
@@ -274,7 +309,8 @@ function MisRutasChoferPage() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -285,11 +321,11 @@ function MisRutasChoferPage() {
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-1">Información sobre las rutas</p>
+                  <p className="font-semibold mb-1">Información sobre tus rutas</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-700">
-                    <li>Las rutas mostradas son las asignadas a tu cooperativa</li>
+                    <li>Las rutas mostradas corresponden al bus que tienes asignado</li>
                     <li>El contador de viajes realizados muestra tu experiencia en cada ruta</li>
-                    <li>Las rutas inactivas pueden ser reactivadas por el administrador de la cooperativa</li>
+                    <li>Si no ves rutas, contacta al administrador para verificar tu asignación de bus</li>
                   </ul>
                 </div>
               </div>

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Lock, User, CreditCard, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, CreditCard, Eye, EyeOff, CheckCircle, Send } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/app/context/AuthContext';
+import { API_URL } from '@/lib/constants';
 
 export default function RegisterForm() {
   const { register } = useAuth();
@@ -20,6 +21,13 @@ export default function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  
+  // Estado para confirmación de email
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -68,12 +76,42 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      await register(formData.email, formData.password, formData.nombre, formData.apellido);
+      const result = await register(formData.email, formData.password, formData.nombre, formData.apellido);
+      
+      if (result.requiresConfirmation) {
+        setRegistrationComplete(true);
+        setConfirmationMessage(result.message);
+        setRegisteredEmail(result.email || formData.email);
+      }
     } catch (err: any) {
       console.error('Error en registro:', err);
       setErrors({ general: err.message || 'Error al registrar usuario. Intenta con otro email.' });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleResendConfirmation = async () => {
+    setResendLoading(true);
+    setResendMessage('');
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/reenviar-confirmacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registeredEmail })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setResendMessage('✅ ' + data.message);
+      } else {
+        setResendMessage('❌ ' + data.message);
+      }
+    } catch (error) {
+      setResendMessage('❌ Error al reenviar el correo. Intenta nuevamente.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -91,13 +129,66 @@ export default function RegisterForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 my-8">
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-20 h-20 mb-3 relative">
+        
+        {/* Pantalla de confirmación de email */}
+        {registrationComplete ? (
+          <div className="text-center py-4">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Mail className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              ¡Revisa tu correo! 📧
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {confirmationMessage}
+            </p>
+            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                Hemos enviado un enlace de confirmación a:
+              </p>
+              <p className="font-semibold text-blue-900 mt-1">
+                {registeredEmail}
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={handleResendConfirmation}
+                disabled={resendLoading}
+                className="w-full py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+                {resendLoading ? 'Enviando...' : 'Reenviar correo de confirmación'}
+              </button>
+              
+              {resendMessage && (
+                <p className={`text-sm ${resendMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                  {resendMessage}
+                </p>
+              )}
+              
+              <Link
+                href="/login"
+                className="block w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all text-center"
+              >
+                Ir al Login
+              </Link>
+            </div>
+            
+            <p className="text-xs text-gray-500 mt-6">
+              Si no encuentras el correo, revisa tu carpeta de spam o correo no deseado.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Formulario de registro normal */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-20 h-20 mb-3 relative">
 
-            <Image 
-              src="/usuario.png" 
-              alt="AndinaBus Logo" 
-              width={80} 
+                <Image 
+                  src="/usuario.png" 
+                  alt="AndinaBus Logo" 
+                  width={80} 
               height={80}
               className="object-contain"
             />
@@ -283,6 +374,8 @@ export default function RegisterForm() {
             </Link>
           </p>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

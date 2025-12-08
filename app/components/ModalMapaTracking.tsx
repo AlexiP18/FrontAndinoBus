@@ -3,11 +3,19 @@
 import { X } from 'lucide-react';
 import MapaTrackingViaje from './MapaTrackingViaje';
 
+interface TerminalCoords {
+  lat: number;
+  lng: number;
+  nombre?: string;
+}
+
 interface ModalMapaTrackingProps {
   viajeId: number;
   token: string;
   onClose: () => void;
   titulo?: string;
+  terminalOrigen?: TerminalCoords;
+  terminalDestino?: TerminalCoords;
 }
 
 /**
@@ -18,6 +26,8 @@ export default function ModalMapaTracking({
   token,
   onClose,
   titulo = 'Tracking de Viaje',
+  terminalOrigen,
+  terminalDestino,
 }: ModalMapaTrackingProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
@@ -41,9 +51,12 @@ export default function ModalMapaTracking({
             viajeId={viajeId}
             token={token}
             showHistorial={true}
+            showRoute={!!(terminalOrigen && terminalDestino)}
             autoRefresh={true}
             refreshInterval={10000}
             className="h-[600px]"
+            terminalOrigen={terminalOrigen}
+            terminalDestino={terminalDestino}
           />
         </div>
 

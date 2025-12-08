@@ -3,7 +3,7 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { useCooperativaConfig } from '@/app/context/CooperativaConfigContext';
 import { getFullName } from '@/lib/auth';
-import { resolveResourceUrl } from '@/lib/api';
+import { resolveResourceUrl, viajeChoferApi, ViajeChofer, getToken } from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Bus, 
@@ -14,9 +14,11 @@ import {
   Menu,
   X,
   Home,
-  Clock
+  Clock,
+  Users,
+  Hash
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 
 export default function CooperativaChoferLayout({
@@ -29,6 +31,24 @@ export default function CooperativaChoferLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [viajeHoy, setViajeHoy] = useState<ViajeChofer | null>(null);
+
+  // Cargar viaje del día para obtener info del bus
+  useEffect(() => {
+    const loadViajeHoy = async () => {
+      if (!user?.userId) return;
+      try {
+        const token = getToken();
+        if (!token) return;
+        const hoy = new Date().toISOString().split('T')[0];
+        const viaje = await viajeChoferApi.getViajeDelDia(user.userId, hoy, token);
+        setViajeHoy(viaje);
+      } catch (err) {
+        console.error('Error al cargar viaje del día:', err);
+      }
+    };
+    loadViajeHoy();
+  }, [user?.userId]);
 
   const handleLogout = async () => {
     await logout();
@@ -149,6 +169,45 @@ export default function CooperativaChoferLayout({
             </div>
           </div>
 
+          {/* Info del Bus Asignado */}
+          {viajeHoy && (
+            <div 
+              className="mx-4 mt-4 p-3 rounded-lg border"
+              style={{ 
+                background: `linear-gradient(to bottom right, ${primaryColor}08, ${primaryColor}15)`,
+                borderColor: `${primaryColor}30`
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Bus className="w-4 h-4" style={{ color: primaryColor }} />
+                <span className="text-xs font-semibold text-gray-700">Bus Asignado Hoy</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Hash className="w-3 h-3 text-gray-400" />
+                  <span className="text-sm font-bold text-gray-900">{viajeHoy.busPlaca}</span>
+                </div>
+                {viajeHoy.busMarca && (
+                  <div className="flex items-center gap-2">
+                    <Bus className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-600">{viajeHoy.busMarca}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Users className="w-3 h-3 text-gray-400" />
+                  <span className="text-xs text-gray-600">{viajeHoy.capacidadTotal} asientos</span>
+                </div>
+                <div 
+                  className="mt-2 pt-2 border-t text-xs"
+                  style={{ borderColor: `${primaryColor}20` }}
+                >
+                  <span className="text-gray-500">Ruta: </span>
+                  <span className="font-medium text-gray-700">{viajeHoy.origen} → {viajeHoy.destino}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Menú de navegación */}
           <nav className="flex-1 overflow-y-auto p-4 space-y-1">
             {menuItems.map((item) => {
@@ -257,6 +316,45 @@ export default function CooperativaChoferLayout({
                   </div>
                 </div>
               </div>
+
+              {/* Info del Bus Asignado - Mobile */}
+              {viajeHoy && (
+                <div 
+                  className="mx-4 mt-4 p-3 rounded-lg border"
+                  style={{ 
+                    background: `linear-gradient(to bottom right, ${primaryColor}08, ${primaryColor}15)`,
+                    borderColor: `${primaryColor}30`
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bus className="w-4 h-4" style={{ color: primaryColor }} />
+                    <span className="text-xs font-semibold text-gray-700">Bus Asignado Hoy</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-3 h-3 text-gray-400" />
+                      <span className="text-sm font-bold text-gray-900">{viajeHoy.busPlaca}</span>
+                    </div>
+                    {viajeHoy.busMarca && (
+                      <div className="flex items-center gap-2">
+                        <Bus className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs text-gray-600">{viajeHoy.busMarca}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-600">{viajeHoy.capacidadTotal} asientos</span>
+                    </div>
+                    <div 
+                      className="mt-2 pt-2 border-t text-xs"
+                      style={{ borderColor: `${primaryColor}20` }}
+                    >
+                      <span className="text-gray-500">Ruta: </span>
+                      <span className="font-medium text-gray-700">{viajeHoy.origen} → {viajeHoy.destino}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Menú de navegación */}
               <nav className="flex-1 overflow-y-auto p-4 space-y-1">
